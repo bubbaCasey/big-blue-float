@@ -1,0 +1,600 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Big Blue Profiles</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:ital,wght@0,400;0,700;1,400&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<style>
+:root{
+  --bg:#EAF1F4; --surface:#FFFFFF; --ink:#0F2A3D; --muted:#4D6577; --line:#C6D5DD; --accent:#0B6B87; --band:rgba(11,107,135,.09); --ghost:#9AAAB5;
+  --pa:#B5651D; --pb:#0B6B87;
+  --c-t:#C93C4F; --c-s:#22897D; --c-sig:#6B4F8C; --c-o2:#2F6FC9; --c-o2s:#5B8BD6; --c-no3:#8A4FD1; --c-chl:#2E8B37; --c-bbp:#9A6B3F; --c-ph:#C77C14; --c-irr:#B89500;
+  box-sizing:border-box; padding-top:env(safe-area-inset-top,0px); padding-bottom:env(safe-area-inset-bottom,0px);
+  color-scheme:light;
+}
+/*DARK-START*/
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#0B1A25; --surface:#122838; --ink:#E2EDF2; --muted:#93AABA; --line:#2B4558; --accent:#5CC2DF; --band:rgba(92,194,223,.10); --ghost:#5E7889;
+    --pa:#E5A15C; --pb:#5CC2DF;
+    --c-t:#F0707F; --c-s:#4FC4B4; --c-sig:#B79BDB; --c-o2:#73A8F0; --c-o2s:#97BDF2; --c-no3:#BC8BF2; --c-chl:#62C46B; --c-bbp:#D3A274; --c-ph:#F0AE4A; --c-irr:#E8CC3A;
+    color-scheme:dark;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#0B1A25; --surface:#122838; --ink:#E2EDF2; --muted:#93AABA; --line:#2B4558; --accent:#5CC2DF; --band:rgba(92,194,223,.10); --ghost:#5E7889;
+  --pa:#E5A15C; --pb:#5CC2DF;
+  --c-t:#F0707F; --c-s:#4FC4B4; --c-sig:#B79BDB; --c-o2:#73A8F0; --c-o2s:#97BDF2; --c-no3:#BC8BF2; --c-chl:#62C46B; --c-bbp:#D3A274; --c-ph:#F0AE4A; --c-irr:#E8CC3A;
+  color-scheme:dark;
+}
+/*DARK-END*/
+*,*::before,*::after{box-sizing:inherit}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:"Atkinson Hyperlegible",system-ui,-apple-system,"Segoe UI",sans-serif;font-size:17px;line-height:1.5}
+.wrap{max-width:1120px;margin:0 auto;padding:0 16px 64px}
+header{padding:32px 0 20px}
+h1{font-size:clamp(28px,5vw,46px);line-height:1.08;margin:0 0 10px;font-weight:700;letter-spacing:-.01em}
+.sub{color:var(--muted);margin:0;max-width:70ch}
+.tabs{display:flex;gap:4px;border-bottom:2px solid var(--line);margin:22px 0 26px}
+.tabs button{font:inherit;font-size:17px;font-weight:700;background:none;border:0;color:var(--muted);padding:10px 16px;cursor:pointer;border-bottom:3px solid transparent;margin-bottom:-2px}
+.tabs button[aria-selected="true"]{color:var(--ink);border-bottom-color:var(--accent)}
+.facts{display:flex;flex-wrap:wrap;gap:6px 26px;margin:0 0 6px;padding:0;list-style:none;color:var(--muted);font-size:15px}
+.facts b{color:var(--ink)}
+h2{font-size:24px;margin:40px 0 6px;line-height:1.2}
+.lede{color:var(--muted);margin:0 0 16px;max-width:70ch}
+.panel{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:18px}
+.controls{display:flex;flex-wrap:wrap;gap:14px 22px;align-items:flex-end;margin-bottom:14px}
+.ctl{display:flex;flex-direction:column;gap:4px;font-size:14px;color:var(--muted)}
+select{font:inherit;font-size:16px;color:var(--ink);background:var(--bg);border:1px solid var(--line);border-radius:6px;padding:7px 10px;min-width:190px}
+.seg{display:inline-flex;border:1px solid var(--line);border-radius:6px;overflow:hidden}
+.seg button{font:inherit;font-size:15px;background:var(--bg);color:var(--ink);border:0;padding:7px 12px;cursor:pointer}
+.seg button+button{border-left:1px solid var(--line)}
+.seg button[aria-pressed="true"]{background:var(--accent);color:var(--surface)}
+label.chk{display:flex;gap:8px;align-items:center;font-size:15px;color:var(--ink);padding:7px 0;cursor:pointer}
+button:focus-visible,select:focus-visible,input:focus-visible,summary:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
+.main-chart{position:relative;height:min(640px,78vh);min-height:420px}
+.note{font-size:15px;color:var(--muted);margin:12px 0 0;max-width:72ch}
+.legend{display:flex;flex-wrap:wrap;gap:6px 22px;font-size:15px;margin:0 0 10px}
+.legend span{display:inline-flex;align-items:center;gap:8px}
+.sw{width:28px;height:0;border-top:3px solid currentColor;display:inline-block}
+.sw.dash{border-top-style:dashed}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:14px}
+.mini{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:12px 12px 8px;cursor:pointer;text-align:left;font:inherit;color:inherit}
+.mini:hover{border-color:var(--accent)}
+.mini h3{margin:0;font-size:16px;display:flex;align-items:center;gap:8px}
+.mini h3 i{width:12px;height:12px;border-radius:50%;flex:none}
+.mini p{margin:0 0 6px;font-size:13px;color:var(--muted)}
+.mini .cv{position:relative;height:280px}
+.flag{font-size:12px;border:1px solid var(--line);border-radius:4px;padding:0 6px;margin-left:auto;font-weight:400;background:var(--bg)}
+.two{display:grid;grid-template-columns:minmax(0,1.3fr) minmax(0,1fr);gap:24px;align-items:start}
+.pair{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+.pair h3{margin:0 0 6px;font-size:16px}
+.pair .cv{position:relative;height:min(600px,74vh);min-height:400px}
+@media (max-width:820px){.two,.pair{grid-template-columns:1fr}}
+.ts-chart{position:relative;height:460px}
+.ramp{height:10px;border-radius:5px;margin:8px 0 2px;background:linear-gradient(90deg,#F2C14E,#E07A3F,#9C3D6E,#3C2F7A,#13234B)}
+.ramp-l{display:flex;justify-content:space-between;font-size:13px;color:var(--muted)}
+ol.qs{padding-left:22px;margin:0;max-width:72ch}
+ol.qs li{margin:0 0 12px}
+details{margin-top:12px}
+summary{cursor:pointer;font-weight:700}
+.tbl{overflow-x:auto;margin-top:10px}
+table{border-collapse:collapse;font-size:14px;font-variant-numeric:tabular-nums}
+.data td,.data th{white-space:nowrap}
+th,td{padding:6px 10px;text-align:right;border-bottom:1px solid var(--line)}
+th{background:var(--surface)}
+.chg th:first-child,.chg td:first-child{text-align:left;white-space:normal}
+.chg{font-size:15px;width:100%;max-width:820px}
+.chg td.up{color:var(--c-t)} .chg td.dn{color:var(--c-o2)}
+.dq{border-left:4px solid var(--c-ph);padding:4px 0 4px 14px;max-width:72ch}
+.dq p{margin:0 0 8px}
+footer{margin-top:48px;color:var(--muted);font-size:14px;border-top:1px solid var(--line);padding-top:16px}
+[hidden]{display:none!important}
+</style>
+</head>
+<body>
+<div class="wrap">
+<header>
+  <h1>Big Blue beneath the Coral Sea</h1>
+  <p class="sub">Every ten days our float sinks to 2,000 m, rises to the surface, and radios home what it measured on the way up. This page updates itself when new dives arrive.</p>
+  <p class="sub" id="pending" hidden></p>
+</header>
+
+<div class="tabs" role="tablist">
+  <button role="tab" id="tab-one" aria-controls="view-one" aria-selected="true">Explore one profile</button>
+  <button role="tab" id="tab-cmp" aria-controls="view-cmp" aria-selected="false">Compare profiles</button>
+</div>
+
+<!-- ============ EXPLORE ONE PROFILE ============ -->
+<div id="view-one" role="tabpanel" aria-labelledby="tab-one">
+  <div class="controls">
+    <label class="ctl">Profile
+      <select id="selP"></select>
+    </label>
+  </div>
+  <ul class="facts" id="facts"></ul>
+
+  <section>
+    <h2>Profile explorer</h2>
+    <p class="lede">Depth runs down the side, like the real ocean. Pick a variable, then add a second one on the top axis to see how two properties line up with depth.</p>
+    <div class="panel">
+      <div class="controls">
+        <label class="ctl">Bottom axis <select id="selA"></select></label>
+        <label class="ctl">Compare with (top axis) <select id="selB"></select></label>
+        <div class="ctl">Depth range
+          <div class="seg" data-range="one">
+            <button data-d="200" aria-pressed="false">0–200 m</button>
+            <button data-d="600" aria-pressed="false">0–600 m</button>
+            <button data-d="1500" aria-pressed="true">Full 1,500 m</button>
+          </div>
+        </div>
+        <label class="chk"><input type="checkbox" id="feat" checked> Mark key features</label>
+        <label class="chk" id="ghostWrap"><input type="checkbox" id="ghost"> Show previous profile</label>
+      </div>
+      <div class="legend" id="ghostLegend" hidden></div>
+      <div class="main-chart"><canvas id="main" aria-label="Depth profile chart"></canvas></div>
+      <p class="note" id="mainNote"></p>
+    </div>
+  </section>
+
+  <section>
+    <h2>All variables at a glance</h2>
+    <p class="lede">Each panel shows one sensor from surface to bottom. Select a panel to open it in the explorer above.</p>
+    <div class="grid" id="grid"></div>
+  </section>
+
+  <section>
+    <h2>Temperature–salinity diagram</h2>
+    <div class="two">
+      <div class="panel">
+        <div class="ts-chart"><canvas id="ts" aria-label="Temperature versus salinity diagram"></canvas></div>
+        <div class="ramp" aria-hidden="true"></div>
+        <div class="ramp-l"><span>Point color: surface</span><span>1,500 m</span></div>
+      </div>
+      <div>
+        <p class="lede" style="margin-top:0">Oceanographers identify water masses by their temperature and salinity, which stay nearly fixed once water sinks away from the surface. Each bend in this curve is a different body of water stacked in the column.</p>
+        <p class="lede">Follow the points from warm (top) to cold (bottom). Find the highest and lowest salinity, and check their depths in the explorer. Those two bends are water that formed in very different parts of the Pacific.</p>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <h2>Questions to explore</h2>
+    <ol class="qs">
+      <li>Temperature barely changes in the top 40–50 m or so, then drops. What mixes this surface layer, and about how thick is it?</li>
+      <li>Chlorophyll is low at the surface but peaks near 110 m. Why would phytoplankton grow best so far below the sunlit surface? Compare the chlorophyll and nitrate profiles to build your argument.</li>
+      <li>Oxygen drops below the chlorophyll peak, reaches a low near 200 m, then rises again around 600 m. What processes remove oxygen at mid-depths, and what might explain the higher oxygen deeper down?</li>
+      <li>pH falls from about 8.04 at the surface to about 7.86 at 1,500 m. Using the oxygen and nitrate profiles, explain how decomposition of sinking organic matter could lower pH at depth.</li>
+      <li>The light sensor reads essentially zero at every depth. Look at the local time of the profile. Why?</li>
+      <li>Particle backscatter (a proxy for particles in the water) peaks a little deeper than chlorophyll. What kinds of particles might it be detecting?</li>
+    </ol>
+  </section>
+
+  <section>
+    <details>
+      <summary>Show the data table for this profile</summary>
+      <div class="tbl"><table class="data" id="tbl"></table></div>
+    </details>
+  </section>
+</div>
+
+<!-- ============ COMPARE ============ -->
+<div id="view-cmp" role="tabpanel" aria-labelledby="tab-cmp" hidden>
+  <div class="controls">
+    <label class="ctl">Earlier profile <select id="selPA"></select></label>
+    <label class="ctl">Later profile <select id="selPB"></select></label>
+  </div>
+  <ul class="facts" id="cmpFacts"></ul>
+
+  <section>
+    <h2>What changed</h2>
+    <p class="lede">Key features found automatically in each profile. Check them against the plots below.</p>
+    <div class="tbl"><table class="chg" id="chg"></table></div>
+  </section>
+
+  <section>
+    <h2>Profiles head to head</h2>
+    <div class="panel">
+      <div class="controls">
+        <label class="ctl">Variable <select id="selV"></select></label>
+        <div class="ctl">View
+          <div class="seg" id="cmpMode">
+            <button data-m="overlay" aria-pressed="true">Overlay</button>
+            <button data-m="side" aria-pressed="false">Side by side</button>
+          </div>
+        </div>
+        <div class="ctl">Depth range
+          <div class="seg" data-range="cmp">
+            <button data-d="200" aria-pressed="false">0–200 m</button>
+            <button data-d="600" aria-pressed="true">0–600 m</button>
+            <button data-d="1500" aria-pressed="false">Full 1,500 m</button>
+          </div>
+        </div>
+      </div>
+      <div class="legend" id="cmpLegend"></div>
+      <div id="overlayBox" class="main-chart"><canvas id="cmpMain" aria-label="Overlay of two profiles"></canvas></div>
+      <div id="sideBox" class="pair" hidden>
+        <div><h3 id="sideA"></h3><div class="cv"><canvas id="cmpA"></canvas></div></div>
+        <div><h3 id="sideB"></h3><div class="cv"><canvas id="cmpB"></canvas></div></div>
+      </div>
+      <p class="note" id="cmpNote"></p>
+    </div>
+  </section>
+
+  <section>
+    <h2>Every variable, both profiles</h2>
+    <p class="lede">Select a panel to open it in the comparison above.</p>
+    <div class="grid" id="cmpGrid"></div>
+  </section>
+
+  <section>
+    <h2>T–S diagrams compared</h2>
+    <div class="two">
+      <div class="panel"><div class="ts-chart"><canvas id="cmpTS" aria-label="Temperature-salinity diagrams for both profiles"></canvas></div></div>
+      <div>
+        <p class="lede" style="margin-top:0">Below about 600 m the two curves sit almost on top of each other: the deep water masses haven't changed. Look at the warm, salty end of the curve. Where do the two profiles part ways?</p>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <h2>Questions to explore</h2>
+    <ol class="qs">
+      <li>Check the drift distance at the top of this tab. Is the change you see in the upper 200 m more likely to come from the float moving or from the ocean changing between dives? What evidence supports your answer?</li>
+      <li>Did the surface mixed layer get deeper or shallower? What weather would cause that change? (Hint: think about wind, heating, and the season in the Southern Hemisphere.)</li>
+      <li>The chlorophyll peak changed in both depth and strength. Compare it with where nitrate starts to rise in each profile. How are the two linked?</li>
+      <li>Below 600 m the profiles nearly match. Why does deep water change so much more slowly than surface water?</li>
+      <li>Find one difference that could be sensor noise rather than a real change. How would you decide?</li>
+    </ol>
+  </section>
+</div>
+
+<section>
+  <h2>A note on data quality</h2>
+  <div class="dq">
+    <p>These are raw, real-time data. The data center still marks <b>oxygen, nitrate, chlorophyll, and pH</b> as unadjusted because those sensors haven't been checked against reference measurements yet. The shapes of the profiles are reliable, but exact values may shift once corrections are applied. Temperature, salinity, pressure, and backscatter are good.</p>
+    <p>Two things to watch: surface oxygen saturation reads about 92% when well-mixed surface water is normally near 100%, and surface nitrate reads about 1.2 µmol/kg in water that is usually almost nitrate-free. Both are typical raw-sensor offsets on a new float. Because the same offset appears in every profile, comparing one profile with another is still meaningful.</p>
+  </div>
+</section>
+
+<footer>Data: GO-BGC / MBARI FloatViz file for float WMO 1902753 (UW 23357), file dated Oct 22, 2026. This page checks for new dives every day; last checked Oct 29, 2026. Backscatter is shown ×10⁻⁴ so the numbers are easier to read. Swampscott High School adopted this float through the Adopt a Float program.</footer>
+</div>
+
+<script>
+const PROFILES = [{"cycle":1,"utc":"2026-10-02T12:27","rows":[{"t":25.5164,"s":35.1258,"sig":23.281,"z":7.5,"o2":189.58,"o2s":92.5,"no3":1.16,"chl":0.0657,"bbp":5.49,"ph":8.0445,"irr":-0.0897},{"t":25.5179,"s":35.1249,"sig":23.28,"z":11.3,"o2":189.54,"o2s":92.5,"no3":1.2,"chl":0.146,"bbp":5.82,"ph":8.0418,"irr":-0.0914},{"t":25.5178,"s":35.1261,"sig":23.281,"z":16.4,"o2":189.52,"o2s":92.5,"no3":1.15,"chl":0.0949,"bbp":5.82,"ph":8.0392,"irr":-0.0767},{"t":25.5181,"s":35.1262,"sig":23.281,"z":21.7,"o2":189.49,"o2s":92.5,"no3":1.22,"chl":0.0657,"bbp":5.15,"ph":8.0382,"irr":-0.0842},{"t":25.5189,"s":35.1265,"sig":23.282,"z":26.4,"o2":189.5,"o2s":92.5,"no3":1.21,"chl":0.073,"bbp":5.04,"ph":8.0357,"irr":-0.0764},{"t":25.5223,"s":35.125,"sig":23.28,"z":31.7,"o2":189.43,"o2s":92.5,"no3":1.17,"chl":0.0876,"bbp":5.71,"ph":8.0351,"irr":-0.0828},{"t":25.5233,"s":35.125,"sig":23.28,"z":36.5,"o2":189.47,"o2s":92.5,"no3":1.2,"chl":0.0657,"bbp":6.05,"ph":8.0323,"irr":-0.0817},{"t":25.4993,"s":35.1275,"sig":23.289,"z":41.5,"o2":189.63,"o2s":92.5,"no3":1.19,"chl":0.0657,"bbp":5.26,"ph":8.0302,"irr":-0.075},{"t":25.3235,"s":35.1561,"sig":23.365,"z":46.3,"o2":190.27,"o2s":92.6,"no3":1.26,"chl":0.073,"bbp":5.26,"ph":8.032,"irr":-0.0768},{"t":25.144,"s":35.1828,"sig":23.441,"z":50.9,"o2":190.68,"o2s":92.5,"no3":1.41,"chl":0.073,"bbp":5.82,"ph":8.0319,"irr":-0.0735},{"t":24.9284,"s":35.2117,"sig":23.529,"z":55.8,"o2":191.26,"o2s":92.5,"no3":1.23,"chl":0.0803,"bbp":5.15,"ph":8.0335,"irr":-0.0674},{"t":24.9133,"s":35.2139,"sig":23.535,"z":61.2,"o2":191.31,"o2s":92.5,"no3":1.25,"chl":0.0876,"bbp":5.37,"ph":8.0327,"irr":-0.0722},{"t":24.9058,"s":35.2181,"sig":23.541,"z":66.5,"o2":191.28,"o2s":92.5,"no3":1.24,"chl":0.0803,"bbp":5.26,"ph":8.0317,"irr":-0.0674},{"t":24.9073,"s":35.2173,"sig":23.54,"z":70.9,"o2":191.21,"o2s":92.5,"no3":1.27,"chl":0.0803,"bbp":5.49,"ph":8.0307,"irr":-0.0755},{"t":24.9033,"s":35.2175,"sig":23.542,"z":75.9,"o2":191.24,"o2s":92.5,"no3":1.18,"chl":0.0876,"bbp":5.37,"ph":8.0308,"irr":-0.0706},{"t":24.8876,"s":35.2268,"sig":23.554,"z":81.3,"o2":191.05,"o2s":92.4,"no3":1.27,"chl":0.1168,"bbp":5.49,"ph":8.0301,"irr":-0.0685},{"t":24.8789,"s":35.2345,"sig":23.563,"z":86.2,"o2":190.84,"o2s":92.2,"no3":1.33,"chl":0.1387,"bbp":6.27,"ph":8.0291,"irr":-0.0699},{"t":24.8541,"s":35.2367,"sig":23.572,"z":91.4,"o2":190.44,"o2s":92.0,"no3":1.28,"chl":0.1606,"bbp":5.6,"ph":8.0282,"irr":-0.0764},{"t":24.8181,"s":35.2401,"sig":23.586,"z":95.9,"o2":189.81,"o2s":91.7,"no3":1.33,"chl":0.1898,"bbp":5.93,"ph":8.0293,"irr":-0.063},{"t":24.8032,"s":35.2486,"sig":23.597,"z":101.2,"o2":189.23,"o2s":91.4,"no3":1.28,"chl":0.219,"bbp":6.15,"ph":8.027,"irr":-0.0704},{"t":24.7081,"s":35.3688,"sig":23.718,"z":111.2,"o2":178.19,"o2s":86.0,"no3":1.25,"chl":0.6862,"bbp":8.16,"ph":8.0237,"irr":-0.075},{"t":24.4992,"s":35.5228,"sig":23.898,"z":120.7,"o2":162.29,"o2s":78.1,"no3":2.07,"chl":0.6351,"bbp":8.05,"ph":7.9893,"irr":-0.0677},{"t":24.4054,"s":35.6209,"sig":24.001,"z":130.2,"o2":156.46,"o2s":75.2,"no3":3.12,"chl":0.5694,"bbp":7.71,"ph":7.9654,"irr":-0.0569},{"t":24.0391,"s":35.6391,"sig":24.124,"z":141.0,"o2":154.51,"o2s":73.8,"no3":3.61,"chl":0.5329,"bbp":8.38,"ph":7.966,"irr":-0.0506},{"t":23.8628,"s":35.7129,"sig":24.233,"z":150.6,"o2":147.12,"o2s":70.1,"no3":4.46,"chl":0.3723,"bbp":6.14,"ph":7.9507,"irr":-0.0487},{"t":23.2184,"s":35.7206,"sig":24.428,"z":160.5,"o2":145.49,"o2s":68.6,"no3":5.33,"chl":0.2482,"bbp":5.69,"ph":7.9491,"irr":-0.0306},{"t":23.0018,"s":35.743,"sig":24.508,"z":170.3,"o2":144.85,"o2s":68.0,"no3":5.71,"chl":0.1971,"bbp":5.25,"ph":7.9427,"irr":-0.0255},{"t":22.5418,"s":35.7438,"sig":24.642,"z":180.6,"o2":145.51,"o2s":67.8,"no3":5.88,"chl":0.1095,"bbp":4.02,"ph":7.9458,"irr":-0.0245},{"t":22.1683,"s":35.7442,"sig":24.748,"z":189.8,"o2":145.02,"o2s":67.1,"no3":6.27,"chl":0.0657,"bbp":3.68,"ph":7.9432,"irr":-0.0062},{"t":22.011,"s":35.7415,"sig":24.791,"z":198.6,"o2":144.76,"o2s":66.8,"no3":6.45,"chl":0.0584,"bbp":3.68,"ph":7.9413,"irr":-0.0015},{"t":21.4375,"s":35.7276,"sig":24.941,"z":210.4,"o2":144.18,"o2s":65.9,"no3":6.88,"chl":0.0292,"bbp":3.34,"ph":7.9381,"irr":0.0085},{"t":20.6631,"s":35.6925,"sig":25.125,"z":219.8,"o2":145.46,"o2s":65.6,"no3":7.53,"chl":0.0219,"bbp":2.89,"ph":7.9382,"irr":0.0058},{"t":20.2268,"s":35.6614,"sig":25.219,"z":229.7,"o2":146.73,"o2s":65.6,"no3":7.66,"chl":0.0219,"bbp":3.12,"ph":7.9385,"irr":0.0241},{"t":19.448,"s":35.6083,"sig":25.383,"z":240.1,"o2":148.16,"o2s":65.3,"no3":8.37,"chl":0.0219,"bbp":2.89,"ph":7.9377,"irr":0.0267},{"t":19.0522,"s":35.5691,"sig":25.455,"z":247.5,"o2":150.57,"o2s":65.9,"no3":8.29,"chl":0.0219,"bbp":2.78,"ph":7.9398,"irr":0.023},{"t":18.667,"s":35.5342,"sig":25.527,"z":259.5,"o2":156.13,"o2s":67.8,"no3":8.22,"chl":0.0219,"bbp":2.66,"ph":7.9436,"irr":0.022},{"t":17.9157,"s":35.4719,"sig":25.667,"z":269.4,"o2":158.52,"o2s":67.9,"no3":8.38,"chl":0.0219,"bbp":2.77,"ph":7.9478,"irr":0.026},{"t":17.3958,"s":35.426,"sig":25.759,"z":279.5,"o2":159.83,"o2s":67.7,"no3":8.68,"chl":0.0219,"bbp":2.77,"ph":7.9479,"irr":0.0233},{"t":16.6916,"s":35.345,"sig":25.864,"z":289.7,"o2":157.19,"o2s":65.7,"no3":9.9,"chl":0.0219,"bbp":2.99,"ph":7.9407,"irr":0.0219},{"t":15.8355,"s":35.2527,"sig":25.991,"z":299.5,"o2":157.79,"o2s":64.8,"no3":11.53,"chl":0.0219,"bbp":2.65,"ph":7.9347,"irr":0.0194},{"t":15.6492,"s":35.2322,"sig":26.018,"z":309.7,"o2":159.33,"o2s":65.2,"no3":11.25,"chl":0.0219,"bbp":2.76,"ph":7.9352,"irr":0.0155},{"t":15.5818,"s":35.2246,"sig":26.028,"z":319.6,"o2":159.41,"o2s":65.2,"no3":11.23,"chl":0.0219,"bbp":2.54,"ph":7.9347,"irr":0.0104},{"t":15.1231,"s":35.172,"sig":26.089,"z":329.3,"o2":156.32,"o2s":63.3,"no3":12.25,"chl":0.0219,"bbp":2.87,"ph":7.9288,"irr":0.0044},{"t":14.6427,"s":35.1215,"sig":26.156,"z":338.8,"o2":157.64,"o2s":63.2,"no3":13.19,"chl":0.0219,"bbp":2.75,"ph":7.9244,"irr":-0.0019},{"t":14.149,"s":35.0753,"sig":26.225,"z":348.9,"o2":160.42,"o2s":63.7,"no3":13.57,"chl":0.0219,"bbp":2.86,"ph":7.927,"irr":-0.0096},{"t":13.8359,"s":35.0356,"sig":26.261,"z":358.5,"o2":160.51,"o2s":63.3,"no3":14.13,"chl":0.0219,"bbp":2.97,"ph":7.922,"irr":-0.0167},{"t":13.1079,"s":34.9576,"sig":26.35,"z":378.4,"o2":162.55,"o2s":63.1,"no3":15.13,"chl":0.0219,"bbp":2.74,"ph":7.9184,"irr":-0.0322},{"t":12.7593,"s":34.9247,"sig":26.394,"z":396.9,"o2":163.89,"o2s":63.2,"no3":15.83,"chl":0.0219,"bbp":2.63,"ph":7.9151,"irr":-0.0521},{"t":11.288,"s":34.7897,"sig":26.57,"z":448.6,"o2":173.98,"o2s":65.0,"no3":17.45,"chl":0.0219,"bbp":2.84,"ph":7.9211,"irr":-0.1008},{"t":10.3978,"s":34.6987,"sig":26.659,"z":497.7,"o2":178.83,"o2s":65.5,"no3":18.82,"chl":0.0219,"bbp":3.28,"ph":7.919,"irr":null},{"t":9.0324,"s":34.5604,"sig":26.779,"z":547.3,"o2":185.94,"o2s":66.1,"no3":21.1,"chl":0.0219,"bbp":2.7,"ph":7.9156,"irr":null},{"t":8.0438,"s":34.4696,"sig":26.86,"z":597.3,"o2":187.72,"o2s":65.2,"no3":23.0,"chl":0.0219,"bbp":2.69,"ph":7.9131,"irr":null},{"t":7.2534,"s":34.4115,"sig":26.929,"z":645.4,"o2":187.78,"o2s":64.1,"no3":25.23,"chl":0.0219,"bbp":2.79,"ph":7.9056,"irr":null},{"t":6.58,"s":34.3879,"sig":27.002,"z":695.7,"o2":182.87,"o2s":61.4,"no3":27.15,"chl":0.0219,"bbp":2.78,"ph":7.8989,"irr":null},{"t":6.2086,"s":34.3912,"sig":27.054,"z":745.5,"o2":177.23,"o2s":59.0,"no3":28.28,"chl":0.0219,"bbp":2.67,"ph":7.892,"irr":null},{"t":5.785,"s":34.3752,"sig":27.095,"z":795.2,"o2":174.16,"o2s":57.4,"no3":29.55,"chl":0.0219,"bbp":2.77,"ph":7.8865,"irr":null},{"t":5.4109,"s":34.3839,"sig":27.147,"z":844.6,"o2":169.33,"o2s":55.4,"no3":30.62,"chl":0.0219,"bbp":2.76,"ph":7.8801,"irr":null},{"t":5.1437,"s":34.3916,"sig":27.185,"z":894.1,"o2":166.43,"o2s":54.1,"no3":31.27,"chl":0.0219,"bbp":3.32,"ph":7.8778,"irr":null},{"t":4.7653,"s":34.402,"sig":27.237,"z":942.3,"o2":161.65,"o2s":52.1,"no3":32.2,"chl":0.0219,"bbp":2.86,"ph":7.8751,"irr":null},{"t":4.5529,"s":34.4325,"sig":27.285,"z":991.3,"o2":156.77,"o2s":50.3,"no3":32.57,"chl":0.0292,"bbp":3.64,"ph":7.8786,"irr":null},{"t":4.0077,"s":34.4602,"sig":27.365,"z":1090.8,"o2":151.65,"o2s":48.0,"no3":33.66,"chl":0.0292,"bbp":2.74,"ph":7.8761,"irr":null},{"t":3.7001,"s":34.4868,"sig":27.417,"z":1189.3,"o2":147.84,"o2s":46.4,"no3":34.12,"chl":0.0292,"bbp":3.74,"ph":7.8736,"irr":null},{"t":3.4272,"s":34.5159,"sig":27.468,"z":1287.7,"o2":143.65,"o2s":44.8,"no3":34.65,"chl":0.0292,"bbp":2.73,"ph":7.8702,"irr":null},{"t":3.2463,"s":34.5329,"sig":27.499,"z":1386.8,"o2":141.31,"o2s":43.9,"no3":34.86,"chl":0.0365,"bbp":2.61,"ph":7.8676,"irr":null},{"t":3.0557,"s":34.5557,"sig":27.535,"z":1484.7,"o2":136.51,"o2s":42.2,"no3":35.42,"chl":0.0292,"bbp":2.27,"ph":7.8632,"irr":null}],"lat":-17.428,"lon":162.308},{"cycle":2,"utc":"2026-10-12T18:21","rows":[{"t":25.6793,"s":35.224,"sig":23.304,"z":7.7,"o2":188.77,"o2s":92.5,"no3":1.2,"chl":0.0438,"bbp":4.7,"ph":8.0355,"irr":-0.1123},{"t":25.4762,"s":35.2442,"sig":23.383,"z":11.0,"o2":189.75,"o2s":92.6,"no3":1.44,"chl":0.0511,"bbp":4.82,"ph":8.0375,"irr":-0.0941},{"t":25.3664,"s":35.2499,"sig":23.421,"z":16.7,"o2":190.19,"o2s":92.7,"no3":1.3,"chl":0.0584,"bbp":4.59,"ph":8.037,"irr":-0.109},{"t":25.3485,"s":35.2519,"sig":23.428,"z":21.5,"o2":190.16,"o2s":92.6,"no3":1.27,"chl":0.0511,"bbp":4.93,"ph":8.0356,"irr":-0.1043},{"t":25.3333,"s":35.2529,"sig":23.434,"z":26.4,"o2":190.15,"o2s":92.6,"no3":1.3,"chl":0.0511,"bbp":4.93,"ph":8.0349,"irr":-0.1093},{"t":25.3281,"s":35.2524,"sig":23.436,"z":31.2,"o2":190.21,"o2s":92.6,"no3":1.27,"chl":0.0584,"bbp":4.93,"ph":8.0338,"irr":-0.0938},{"t":25.3163,"s":35.2527,"sig":23.44,"z":36.4,"o2":190.23,"o2s":92.6,"no3":1.24,"chl":0.0584,"bbp":4.7,"ph":8.033,"irr":-0.1058},{"t":25.3084,"s":35.2553,"sig":23.445,"z":41.7,"o2":190.24,"o2s":92.6,"no3":1.24,"chl":0.0511,"bbp":4.93,"ph":8.0305,"irr":-0.0941},{"t":25.3066,"s":35.2548,"sig":23.445,"z":46.5,"o2":190.23,"o2s":92.6,"no3":1.25,"chl":0.0584,"bbp":4.7,"ph":8.0297,"irr":-0.0995},{"t":25.2884,"s":35.2555,"sig":23.452,"z":51.4,"o2":190.21,"o2s":92.6,"no3":1.25,"chl":0.0584,"bbp":5.04,"ph":8.0286,"irr":-0.0894},{"t":25.224,"s":35.2539,"sig":23.47,"z":56.2,"o2":190.45,"o2s":92.6,"no3":1.4,"chl":0.0584,"bbp":5.15,"ph":8.0284,"irr":-0.0964},{"t":24.8758,"s":35.2629,"sig":23.584,"z":61.5,"o2":191.27,"o2s":92.5,"no3":1.54,"chl":0.073,"bbp":5.37,"ph":8.0338,"irr":-0.0989},{"t":24.825,"s":35.2621,"sig":23.599,"z":66.3,"o2":191.2,"o2s":92.3,"no3":1.36,"chl":0.0803,"bbp":5.37,"ph":8.0346,"irr":-0.0895},{"t":24.8013,"s":35.2601,"sig":23.605,"z":71.2,"o2":191.0,"o2s":92.2,"no3":1.42,"chl":0.0803,"bbp":5.82,"ph":8.0341,"irr":-0.0858},{"t":24.7503,"s":35.2645,"sig":23.624,"z":75.8,"o2":190.55,"o2s":91.9,"no3":1.41,"chl":0.0876,"bbp":5.48,"ph":8.034,"irr":-0.0861},{"t":24.7122,"s":35.2653,"sig":23.636,"z":80.8,"o2":190.17,"o2s":91.7,"no3":1.31,"chl":0.1095,"bbp":5.6,"ph":8.033,"irr":-0.0916},{"t":24.6786,"s":35.2701,"sig":23.65,"z":85.6,"o2":189.41,"o2s":91.3,"no3":1.36,"chl":0.1168,"bbp":5.48,"ph":8.0325,"irr":-0.0872},{"t":24.6508,"s":35.2887,"sig":23.673,"z":90.7,"o2":188.77,"o2s":90.9,"no3":1.33,"chl":0.1679,"bbp":5.6,"ph":8.0317,"irr":-0.0951},{"t":24.5858,"s":35.2997,"sig":23.701,"z":95.9,"o2":190.74,"o2s":91.8,"no3":1.4,"chl":0.1679,"bbp":5.71,"ph":8.0305,"irr":-0.1043},{"t":24.4441,"s":35.3003,"sig":23.745,"z":101.2,"o2":184.35,"o2s":88.5,"no3":1.35,"chl":0.4161,"bbp":6.82,"ph":8.0338,"irr":-0.0894},{"t":24.1809,"s":35.6505,"sig":24.089,"z":111.3,"o2":149.58,"o2s":71.6,"no3":4.05,"chl":0.438,"bbp":6.26,"ph":7.9643,"irr":-0.0838},{"t":23.6288,"s":35.6804,"sig":24.275,"z":120.9,"o2":150.71,"o2s":71.5,"no3":4.56,"chl":0.3285,"bbp":5.36,"ph":7.9621,"irr":-0.0739},{"t":23.585,"s":35.6795,"sig":24.288,"z":130.5,"o2":151.06,"o2s":71.6,"no3":4.7,"chl":0.2993,"bbp":5.81,"ph":7.9629,"irr":-0.0765},{"t":23.5278,"s":35.6848,"sig":24.31,"z":140.6,"o2":150.65,"o2s":71.4,"no3":4.71,"chl":0.2847,"bbp":5.14,"ph":7.963,"irr":-0.0583},{"t":23.1521,"s":35.6916,"sig":24.425,"z":150.4,"o2":150.48,"o2s":70.8,"no3":4.97,"chl":0.2044,"bbp":4.8,"ph":7.9614,"irr":-0.0692},{"t":22.7577,"s":35.6853,"sig":24.534,"z":160.8,"o2":152.64,"o2s":71.4,"no3":4.99,"chl":0.146,"bbp":3.68,"ph":7.9657,"irr":-0.0492},{"t":22.1205,"s":35.6761,"sig":24.709,"z":170.5,"o2":153.31,"o2s":70.9,"no3":5.25,"chl":0.0876,"bbp":3.46,"ph":7.9658,"irr":-0.0494},{"t":21.8073,"s":35.6818,"sig":24.802,"z":180.6,"o2":152.82,"o2s":70.3,"no3":5.64,"chl":0.0657,"bbp":3.23,"ph":7.9648,"irr":-0.033},{"t":21.6033,"s":35.6849,"sig":24.861,"z":190.2,"o2":152.1,"o2s":69.7,"no3":5.72,"chl":0.0584,"bbp":3.46,"ph":7.9626,"irr":-0.026},{"t":21.2626,"s":35.6825,"sig":24.954,"z":200.1,"o2":151.43,"o2s":69.0,"no3":6.04,"chl":0.0438,"bbp":3.68,"ph":7.9604,"irr":-0.0159},{"t":20.8655,"s":35.6728,"sig":25.055,"z":208.1,"o2":149.97,"o2s":67.8,"no3":6.64,"chl":0.0219,"bbp":3.23,"ph":7.9584,"irr":-0.0054},{"t":20.2347,"s":35.6475,"sig":25.206,"z":220.1,"o2":149.48,"o2s":66.8,"no3":7.21,"chl":0.0219,"bbp":3.45,"ph":7.954,"irr":-0.0009},{"t":19.763,"s":35.6184,"sig":25.308,"z":229.8,"o2":149.54,"o2s":66.3,"no3":7.53,"chl":0.0219,"bbp":3.34,"ph":7.949,"irr":0.0071},{"t":18.981,"s":35.5588,"sig":25.465,"z":239.8,"o2":149.16,"o2s":65.2,"no3":8.27,"chl":0.0219,"bbp":3.0,"ph":7.9452,"irr":0.0078},{"t":18.5501,"s":35.5294,"sig":25.552,"z":249.5,"o2":150.1,"o2s":65.0,"no3":8.92,"chl":0.0219,"bbp":3.22,"ph":7.9449,"irr":0.0119},{"t":18.2008,"s":35.491,"sig":25.611,"z":260.1,"o2":153.08,"o2s":65.9,"no3":8.74,"chl":0.0219,"bbp":2.77,"ph":7.9472,"irr":0.0152},{"t":17.7848,"s":35.4525,"sig":25.684,"z":269.1,"o2":153.11,"o2s":65.4,"no3":9.03,"chl":0.0219,"bbp":3.0,"ph":7.9463,"irr":0.0173},{"t":17.3145,"s":35.4062,"sig":25.763,"z":279.4,"o2":153.53,"o2s":65.0,"no3":9.81,"chl":0.0219,"bbp":3.22,"ph":7.9414,"irr":0.0126},{"t":16.9226,"s":35.3683,"sig":25.828,"z":288.9,"o2":157.09,"o2s":66.0,"no3":9.42,"chl":0.0219,"bbp":2.77,"ph":7.9466,"irr":0.0145},{"t":16.5134,"s":35.3256,"sig":25.892,"z":299.4,"o2":157.96,"o2s":65.8,"no3":9.9,"chl":0.0219,"bbp":2.54,"ph":7.946,"irr":0.0125},{"t":16.0202,"s":35.2789,"sig":25.97,"z":307.5,"o2":159.7,"o2s":65.9,"no3":10.65,"chl":0.0219,"bbp":2.76,"ph":7.9449,"irr":0.0101},{"t":15.4648,"s":35.2147,"sig":26.046,"z":319.1,"o2":161.65,"o2s":65.9,"no3":11.42,"chl":0.0219,"bbp":3.09,"ph":7.9437,"irr":0.0066},{"t":15.1566,"s":35.1813,"sig":26.089,"z":329.3,"o2":161.98,"o2s":65.7,"no3":11.87,"chl":0.0219,"bbp":2.87,"ph":7.9426,"irr":0.002},{"t":14.895,"s":35.1573,"sig":26.128,"z":339.5,"o2":162.02,"o2s":65.3,"no3":12.37,"chl":0.0219,"bbp":2.87,"ph":7.941,"irr":-0.0024},{"t":14.4094,"s":35.1073,"sig":26.195,"z":349.2,"o2":162.65,"o2s":64.9,"no3":13.05,"chl":0.0219,"bbp":2.86,"ph":7.9383,"irr":-0.0072},{"t":14.2964,"s":35.0962,"sig":26.211,"z":358.6,"o2":162.73,"o2s":64.8,"no3":13.19,"chl":0.0219,"bbp":2.98,"ph":7.9366,"irr":-0.0113},{"t":13.7467,"s":35.036,"sig":26.28,"z":378.5,"o2":164.43,"o2s":64.7,"no3":13.88,"chl":0.0219,"bbp":3.98,"ph":7.9334,"irr":-0.0258},{"t":13.3066,"s":34.9912,"sig":26.336,"z":398.8,"o2":165.35,"o2s":64.5,"no3":14.48,"chl":0.0219,"bbp":3.19,"ph":7.9331,"irr":-0.0434},{"t":11.576,"s":34.7998,"sig":26.525,"z":447.6,"o2":166.75,"o2s":62.7,"no3":17.2,"chl":0.0219,"bbp":2.84,"ph":7.9196,"irr":-0.0866},{"t":9.7791,"s":34.6404,"sig":26.719,"z":497.2,"o2":178.01,"o2s":64.4,"no3":20.22,"chl":0.0219,"bbp":3.05,"ph":7.9187,"irr":null},{"t":8.4837,"s":34.5181,"sig":26.831,"z":547.3,"o2":183.35,"o2s":64.4,"no3":22.52,"chl":0.0219,"bbp":3.14,"ph":7.9141,"irr":null},{"t":7.9263,"s":34.4677,"sig":26.876,"z":596.7,"o2":184.89,"o2s":64.1,"no3":23.77,"chl":0.0219,"bbp":3.03,"ph":7.9119,"irr":null},{"t":6.6515,"s":34.3955,"sig":26.998,"z":647.0,"o2":181.28,"o2s":61.0,"no3":26.86,"chl":0.0219,"bbp":3.01,"ph":7.903,"irr":null},{"t":6.5703,"s":34.3918,"sig":27.007,"z":696.4,"o2":180.35,"o2s":60.6,"no3":27.12,"chl":0.0219,"bbp":3.23,"ph":7.8999,"irr":null},{"t":6.1199,"s":34.3832,"sig":27.059,"z":746.0,"o2":176.53,"o2s":58.7,"no3":28.43,"chl":0.0219,"bbp":3.0,"ph":7.8949,"irr":null},{"t":5.8393,"s":34.3796,"sig":27.092,"z":795.2,"o2":173.41,"o2s":57.3,"no3":29.27,"chl":0.0219,"bbp":3.33,"ph":7.8893,"irr":null},{"t":5.3834,"s":34.3761,"sig":27.144,"z":845.0,"o2":169.16,"o2s":55.3,"no3":30.5,"chl":0.0219,"bbp":2.76,"ph":7.884,"irr":null},{"t":4.9093,"s":34.3927,"sig":27.213,"z":894.5,"o2":163.75,"o2s":52.9,"no3":31.61,"chl":0.0219,"bbp":2.76,"ph":7.88,"irr":null},{"t":4.6081,"s":34.4174,"sig":27.266,"z":943.1,"o2":158.17,"o2s":50.8,"no3":32.42,"chl":0.0219,"bbp":2.86,"ph":7.8765,"irr":null},{"t":4.4482,"s":34.4316,"sig":27.295,"z":991.8,"o2":153.61,"o2s":49.1,"no3":32.76,"chl":0.0292,"bbp":2.64,"ph":7.8784,"irr":null},{"t":3.8841,"s":34.4767,"sig":27.39,"z":1089.9,"o2":147.0,"o2s":46.4,"no3":33.75,"chl":0.0292,"bbp":2.74,"ph":7.8742,"irr":null},{"t":3.5854,"s":34.4995,"sig":27.439,"z":1188.4,"o2":144.99,"o2s":45.4,"no3":34.13,"chl":0.0292,"bbp":2.62,"ph":7.8741,"irr":null},{"t":3.3067,"s":34.5267,"sig":27.488,"z":1287.8,"o2":141.71,"o2s":44.1,"no3":34.52,"chl":0.0292,"bbp":2.61,"ph":7.8713,"irr":null},{"t":3.1478,"s":34.5455,"sig":27.518,"z":1387.0,"o2":137.79,"o2s":42.7,"no3":34.93,"chl":0.0292,"bbp":2.61,"ph":7.8671,"irr":null},{"t":3.0817,"s":34.5528,"sig":27.531,"z":1484.5,"o2":135.85,"o2s":42.1,"no3":35.13,"chl":0.0292,"bbp":2.61,"ph":7.8633,"irr":null}],"lat":-17.533,"lon":162.209}];
+const PENDING = [{"cycle":3,"utc":"2026-10-23T00:59"}];
+
+const VARS = [
+  {k:'t',   name:'Temperature',          unit:'°C',           c:'--c-t',   q:false, d:'Warm surface water sits on top of cold deep water.'},
+  {k:'s',   name:'Salinity',             unit:'PSS-78',       c:'--c-s',   q:false, d:'Look for a salty layer near 190 m and a fresher layer near 800 m.'},
+  {k:'sig', name:'Density (σθ)',         unit:'kg/m³ − 1000', c:'--c-sig', q:false, d:'Density increases with depth; the steep zone is the pycnocline.'},
+  {k:'o2',  name:'Dissolved oxygen',     unit:'µmol/kg',      c:'--c-o2',  q:true,  d:'High near the surface, a low near 200 m, a second high near 600 m.'},
+  {k:'o2s', name:'Oxygen saturation',    unit:'%',            c:'--c-o2s', q:true,  d:'Percent of the oxygen the water could hold at its temperature and salinity.'},
+  {k:'no3', name:'Nitrate',              unit:'µmol/kg',      c:'--c-no3', q:true,  d:'A key nutrient; nearly used up at the surface, abundant at depth.'},
+  {k:'chl', name:'Chlorophyll a',        unit:'mg/m³',        c:'--c-chl', q:true,  d:'A proxy for phytoplankton; note the deep chlorophyll maximum.'},
+  {k:'bbp', name:'Particle backscatter', unit:'×10⁻⁴ m⁻¹',    c:'--c-bbp', q:false, d:'How much red light bounces off particles in the water.'},
+  {k:'ph',  name:'pH',                   unit:'total scale',  c:'--c-ph',  q:true,  d:'Seawater acidity measured in place.'},
+  {k:'irr', name:'Light (PAR)', unit:'µmol photons/m²/s', c:'--c-irr', q:false, d:'Sunlight available for photosynthesis, measured only above about 450 m. Check the local time: a night-time dive reads only sensor noise near zero.'}
+];
+const byKey = Object.fromEntries(VARS.map(v=>[v.k,v]));
+const MON=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+
+/* ---------- helpers ---------- */
+function css(n){return getComputedStyle(document.documentElement).getPropertyValue(n).trim();}
+function utcDate(p){return new Date(p.utc+':00Z');}
+function shortDate(p){const d=utcDate(p);return MON[d.getUTCMonth()]+' '+d.getUTCDate();}
+function plabel(i){const p=PROFILES[i];return 'Profile '+p.cycle+' ('+shortDate(p)+(i===PROFILES.length-1?', newest':'')+')';}
+function localTime(p){
+  const d=new Date(utcDate(p).getTime()+p.lon/15*3600e3);
+  let h=d.getUTCHours(), ap=h<12?'am':'pm'; h=h%12||12;
+  return 'about '+h+' '+ap+' '+MON[d.getUTCMonth()]+' '+d.getUTCDate()+' local';
+}
+function fmtLat(v){return Math.abs(v).toFixed(2)+'° '+(v<0?'S':'N');}
+function fmtLon(v){return Math.abs(v).toFixed(2)+'° '+(v<0?'W':'E');}
+function pts(p,k,maxD){return p.rows.filter(r=>r[k]!==null && r.z<=maxD+5).map(r=>({x:r[k],y:r.z}));}
+function haversine(a,b){const R=6371,t=Math.PI/180,dl=(b.lat-a.lat)*t,dn=(b.lon-a.lon)*t;
+  const h=Math.sin(dl/2)**2+Math.cos(a.lat*t)*Math.cos(b.lat*t)*Math.sin(dn/2)**2;return 2*R*Math.asin(Math.sqrt(h));}
+function bearingWord(a,b){const t=Math.PI/180,y=Math.sin((b.lon-a.lon)*t)*Math.cos(b.lat*t),
+  x=Math.cos(a.lat*t)*Math.sin(b.lat*t)-Math.sin(a.lat*t)*Math.cos(b.lat*t)*Math.cos((b.lon-a.lon)*t);
+  const deg=(Math.atan2(y,x)/t+360)%360;
+  return ['north','north-northeast','northeast','east-northeast','east','east-southeast','southeast','south-southeast','south','south-southwest','southwest','west-southwest','west','west-northwest','northwest','north-northwest'][Math.round(deg/22.5)%16];}
+
+/* ---------- automatic feature detection ---------- */
+function interpDepth(r1,r2,k,target){const f=(target-r1[k])/(r2[k]-r1[k]);return r1.z+f*(r2.z-r1.z);}
+function features(p){
+  const R=p.rows, f={};
+  // mixed layer: temperature 0.2 °C colder than at ~10 m
+  let ref=R.reduce((a,r)=>Math.abs(r.z-10)<Math.abs(a.z-10)?r:a), thr=ref.t-0.2;
+  for(let i=1;i<R.length;i++){ if(R[i].z>ref.z && R[i].t<thr){ f.mld=interpDepth(R[i-1],R[i],'t',thr); break; } }
+  const inR=(lo,hi,k)=>R.filter(r=>r.z>=lo&&r.z<=hi&&r[k]!==null);
+  const mx=(arr,k)=>arr.reduce((a,r)=>r[k]>a[k]?r:a), mn=(arr,k)=>arr.reduce((a,r)=>r[k]<a[k]?r:a);
+  f.chlMax=mx(inR(0,400,'chl'),'chl');
+  f.salMax=mx(inR(50,400,'s'),'s');
+  f.salMin=mn(inR(400,1500,'s'),'s');
+  f.o2Min=mn(inR(150,500,'o2'),'o2');
+  f.o2Int=mx(inR(450,900,'o2'),'o2');
+  const surfN=R[0].no3;
+  const nc=R.find(r=>r.no3!==null && r.no3>surfN+2); f.nitracline=nc?nc.z:null;
+  f.surf=R[0]; f.deep=R[R.length-1];
+  return f;
+}
+const FEAT = PROFILES.map(features);
+
+function featureList(i){
+  const f=FEAT[i], L=[];
+  if(f.mld) L.push({z:[0,f.mld],label:'Surface mixed layer',band:true});
+  L.push({z:f.chlMax.z,label:'Chlorophyll peak'});
+  L.push({z:f.salMax.z,label:'Salinity maximum'});
+  L.push({z:f.o2Min.z,label:'Oxygen minimum'});
+  L.push({z:f.salMin.z,label:'Salinity minimum'});
+  return L;
+}
+
+const featurePlugin = {
+  id:'features',
+  beforeDatasetsDraw(chart,args,opts){
+    if(!opts||!opts.list) return;
+    const {ctx,chartArea:a,scales:{y}}=chart;
+    ctx.save(); ctx.font='13px "Atkinson Hyperlegible", system-ui, sans-serif'; ctx.textAlign='right';
+    opts.list.forEach(f=>{
+      if(f.band){
+        const y0=y.getPixelForValue(f.z[0]), y1=y.getPixelForValue(Math.min(f.z[1],y.max));
+        ctx.fillStyle=css('--band'); ctx.fillRect(a.left,y0,a.right-a.left,y1-y0);
+        ctx.fillStyle=css('--muted'); ctx.fillText(f.label+' (~'+Math.round(f.z[1])+' m)',a.right-6,y1-6);
+      } else if(f.z<=y.max){
+        const py=y.getPixelForValue(f.z);
+        ctx.strokeStyle=css('--muted'); ctx.setLineDash([5,4]); ctx.lineWidth=1;
+        ctx.beginPath(); ctx.moveTo(a.left,py); ctx.lineTo(a.right,py); ctx.stroke();
+        ctx.setLineDash([]); ctx.fillStyle=css('--muted'); ctx.fillText(f.label+' (~'+Math.round(f.z)+' m)',a.right-6,py-5);
+      }
+    });
+    ctx.restore();
+  }
+};
+Chart.register(featurePlugin);
+
+function baseFont(){Chart.defaults.font.family='"Atkinson Hyperlegible", system-ui, sans-serif';Chart.defaults.color=css('--muted');Chart.defaults.borderColor=css('--line');}
+function ds(data,label,col,axis,opt){return Object.assign({label,data,xAxisID:axis||'x',showLine:true,borderColor:col,backgroundColor:col,borderWidth:2.5,pointRadius:3,pointHoverRadius:6,tension:0},opt||{});}
+function yAxis(maxD,small){return {reverse:true,min:0,max:maxD,title:{display:!small,text:'Depth (m)',color:css('--ink'),font:{size:15}},grid:{color:css('--line')},ticks:small?{stepSize:maxD/3,font:{size:11}}:{}};}
+function xAxis(v,pos,extra){return Object.assign({type:'linear',position:pos||'bottom',title:{display:true,text:v.name+' ('+v.unit+')',color:css(v.c),font:{size:15,weight:'bold'}},grid:{color:css('--line')},ticks:{color:css(v.c)}},extra||{});}
+function tipCb(){return {title:(it)=>it[0].parsed.y.toFixed(0)+' m',label:(i)=>' '+i.dataset.label+': '+i.parsed.x};}
+function setPressed(group,btn){group.querySelectorAll('button').forEach(b=>b.setAttribute('aria-pressed',b===btn?'true':'false'));}
+function pdOptions(sel,val,exclude){sel.innerHTML=PROFILES.map((p,i)=>i===exclude?'':'<option value="'+i+'"'+(i===val?' selected':'')+'>'+plabel(i)+'</option>').join('');}
+const reduceMotion=()=>matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+/* ================= EXPLORE ONE ================= */
+const S={p:PROFILES.length-1,a:'t',b:'chl',d:1500,feat:true,ghost:false};
+let mainChart,miniCharts=[],tsChart;
+
+function renderFacts(){
+  const p=PROFILES[S.p];
+  document.getElementById('facts').innerHTML=
+    '<li>Float <b>WMO 1902753</b></li><li>Profile <b>#'+p.cycle+'</b></li>'+
+    '<li><b>'+shortDate(p)+', 2026</b>, '+p.utc.slice(11)+' UTC ('+localTime(p)+')</li>'+
+    (p.posEst?'<li>Position not reported this dive (last known: <b>'+fmtLat(p.lat)+', '+fmtLon(p.lon)+'</b>)</li>':'<li><b>'+fmtLat(p.lat)+', '+fmtLon(p.lon)+'</b></li>')+
+    '<li>Surface to <b>'+Math.round(p.rows[p.rows.length-1].z).toLocaleString()+' m</b>, '+p.rows.length+' sample depths</li>';
+  const gw=document.getElementById('ghostWrap'); gw.hidden=S.p===0; if(S.p===0) S.ghost=false;
+  document.getElementById('ghost').checked=S.ghost;
+}
+
+function buildMain(){
+  if(mainChart) mainChart.destroy();
+  const p=PROFILES[S.p], A=byKey[S.a], B=S.b?byKey[S.b]:null;
+  const sets=[], scales={y:yAxis(S.d), x:xAxis(A)};
+  const prev=S.ghost&&S.p>0?PROFILES[S.p-1]:null;
+  if(prev){
+    sets.push(ds(pts(prev,A.k,S.d),'Profile '+prev.cycle+' '+A.name,css('--ghost'),'x',{borderDash:[6,4],pointRadius:0,borderWidth:2,order:5}));
+    if(B) sets.push(ds(pts(prev,B.k,S.d),'Profile '+prev.cycle+' '+B.name,css('--ghost'),'x2',{borderDash:[2,3],pointRadius:0,borderWidth:2,order:5}));
+  }
+  sets.push(ds(pts(p,A.k,S.d),A.name+' ('+A.unit+')',css(A.c),'x'));
+  if(B){ sets.push(ds(pts(p,B.k,S.d),B.name+' ('+B.unit+')',css(B.c),'x2')); scales.x2=xAxis(B,'top',{grid:{drawOnChartArea:false}}); }
+  mainChart=new Chart(document.getElementById('main'),{type:'scatter',data:{datasets:sets},
+    options:{responsive:true,maintainAspectRatio:false,animation:false,interaction:{mode:'nearest',axis:'y',intersect:false},
+      plugins:{legend:{display:false},features:{list:S.feat?featureList(S.p):null},tooltip:{callbacks:tipCb()}},scales}});
+  const lg=document.getElementById('ghostLegend');
+  lg.hidden=!prev;
+  if(prev) lg.innerHTML='<span style="color:'+css(A.c)+'"><i class="sw"></i><span style="color:var(--ink)">Profile '+p.cycle+' ('+shortDate(p)+')</span></span>'+
+    '<span style="color:'+css('--ghost')+'"><i class="sw dash"></i><span style="color:var(--ink)">Profile '+prev.cycle+' ('+shortDate(prev)+'), gray</span></span>';
+  let note=A.d+(B?' '+B.d:'');
+  if(A.q||(B&&B.q)) note+=' Values for unadjusted sensors are preliminary (see the data-quality note).';
+  document.getElementById('mainNote').textContent=note;
+}
+
+function miniChart(cv,sets,v){
+  return new Chart(cv,{type:'scatter',data:{datasets:sets},options:{responsive:true,maintainAspectRatio:false,animation:false,
+    plugins:{legend:{display:false},tooltip:{enabled:false}},
+    scales:{y:yAxis(1500,true),x:{ticks:{maxTicksLimit:4,font:{size:11}},grid:{color:css('--line')}}}}});
+}
+function gridCards(el,onPick){
+  if(el.children.length) return;
+  VARS.forEach(v=>{
+    const b=document.createElement('button'); b.className='mini'; b.type='button';
+    b.innerHTML='<h3><i style="background:var('+v.c+')"></i>'+v.name+(v.q?'<span class="flag">raw</span>':'')+'</h3><p>'+v.unit+'</p><div class="cv"><canvas></canvas></div>';
+    b.setAttribute('aria-label','Open '+v.name+' above');
+    b.addEventListener('click',()=>onPick(v));
+    el.appendChild(b);
+  });
+}
+function buildGrid(){
+  const g=document.getElementById('grid');
+  gridCards(g,v=>{S.a=v.k; if(S.b===v.k) S.b=''; syncSelects(); buildMain();
+    document.getElementById('main').scrollIntoView({behavior:reduceMotion()?'auto':'smooth',block:'center'});});
+  miniCharts.forEach(c=>c.destroy()); miniCharts=[];
+  const p=PROFILES[S.p];
+  [...g.querySelectorAll('canvas')].forEach((cv,i)=>{const v=VARS[i];
+    miniCharts.push(miniChart(cv,[ds(pts(p,v.k,1500),v.name,css(v.c),'x',{pointRadius:1.5,borderWidth:2})],v));});
+}
+
+function depthColor(z){
+  const st=[[0,[242,193,78]],[150,[224,122,63]],[400,[156,61,110]],[800,[60,47,122]],[1500,[19,35,75]]];
+  for(let i=0;i<st.length-1;i++){const [z0,c0]=st[i],[z1,c1]=st[i+1]; if(z<=z1){const f=(z-z0)/(z1-z0);return 'rgb('+c0.map((c,j)=>Math.round(c+(c1[j]-c)*f)).join(',')+')';}}
+  return 'rgb(19,35,75)';
+}
+function tsScales(){return {x:{title:{display:true,text:'Salinity (PSS-78)',color:css('--c-s'),font:{size:15,weight:'bold'}},grid:{color:css('--line')}},
+  y:{title:{display:true,text:'Temperature (°C)',color:css('--c-t'),font:{size:15,weight:'bold'}},grid:{color:css('--line')}}};}
+function buildTS(){
+  if(tsChart) tsChart.destroy();
+  const d=PROFILES[S.p].rows.map(r=>({x:r.s,y:r.t,z:r.z}));
+  tsChart=new Chart(document.getElementById('ts'),{type:'scatter',data:{datasets:[{data:d,showLine:true,borderColor:css('--line'),borderWidth:1.5,
+    pointRadius:5,pointHoverRadius:8,pointBackgroundColor:d.map(p=>depthColor(p.z)),pointBorderColor:d.map(p=>depthColor(p.z))}]},
+    options:{responsive:true,maintainAspectRatio:false,animation:false,
+      plugins:{legend:{display:false},tooltip:{callbacks:{label:(i)=>' '+i.raw.z.toFixed(0)+' m: '+i.raw.y+' °C, '+i.raw.x+' PSS'}}},scales:tsScales()}});
+}
+function buildTable(){
+  const cols=[['z','Depth (m)'],...VARS.map(v=>[v.k,v.name])];
+  let h='<thead><tr>'+cols.map(c=>'<th>'+c[1]+'</th>').join('')+'</tr></thead><tbody>';
+  PROFILES[S.p].rows.forEach(r=>{h+='<tr>'+cols.map(c=>'<td>'+(r[c[0]]===null?'—':r[c[0]])+'</td>').join('')+'</tr>';});
+  document.getElementById('tbl').innerHTML=h+'</tbody>';
+}
+function syncSelects(){
+  const a=document.getElementById('selA'), b=document.getElementById('selB');
+  a.innerHTML=VARS.map(v=>'<option value="'+v.k+'"'+(v.k===S.a?' selected':'')+'>'+v.name+'</option>').join('');
+  b.innerHTML='<option value="">None</option>'+VARS.filter(v=>v.k!==S.a).map(v=>'<option value="'+v.k+'"'+(v.k===S.b?' selected':'')+'>'+v.name+'</option>').join('');
+}
+function renderOne(){renderFacts(); buildMain(); buildGrid(); buildTS(); buildTable();}
+
+/* ================= COMPARE ================= */
+const C={a:Math.max(0,PROFILES.length-2),b:PROFILES.length-1,v:'chl',mode:'overlay',d:600};
+let cmpCharts=[],cmpMini=[];
+
+function cmpFacts(){
+  const A=PROFILES[C.a],B=PROFILES[C.b];
+  const days=(utcDate(B)-utcDate(A))/864e5, km=haversine(A,B);
+  document.getElementById('cmpFacts').innerHTML=
+    '<li>Time between dives: <b>'+days.toFixed(1)+' days</b></li>'+
+    ((A.posEst||B.posEst)?'<li>Drift: <b>not available</b> (the float did not report a GPS position for profile '+(A.posEst?A.cycle:B.cycle)+')</li>':
+    '<li>Drift: <b>'+km.toFixed(1)+' km</b> toward the <b>'+bearingWord(A,B)+'</b></li>'+
+    '<li>Average drift speed: <b>'+(km/days).toFixed(1)+' km/day</b></li>');
+}
+function changeTable(){
+  const fa=FEAT[C.a],fb=FEAT[C.b],A=PROFILES[C.a],B=PROFILES[C.b];
+  const rows=[
+    ['Surface temperature (°C)',fa.surf.t,fb.surf.t,2],
+    ['Surface salinity (PSS-78)',fa.surf.s,fb.surf.s,3],
+    ['Mixed layer depth (m)',fa.mld,fb.mld,0],
+    ['Chlorophyll peak (mg/m³)',fa.chlMax.chl,fb.chlMax.chl,2],
+    ['Chlorophyll peak depth (m)',fa.chlMax.z,fb.chlMax.z,0],
+    ['Top of nitracline (m), where nitrate rises 2 µmol/kg above surface',fa.nitracline,fb.nitracline,0],
+    ['Salinity maximum (PSS-78)',fa.salMax.s,fb.salMax.s,3],
+    ['Salinity maximum depth (m)',fa.salMax.z,fb.salMax.z,0],
+    ['Oxygen minimum, 150–500 m (µmol/kg)',fa.o2Min.o2,fb.o2Min.o2,1],
+    ['Oxygen minimum depth (m)',fa.o2Min.z,fb.o2Min.z,0],
+    ['Surface pH',fa.surf.ph,fb.surf.ph,3],
+    ['Temperature at 1,485 m (°C)',fa.deep.t,fb.deep.t,2]
+  ];
+  let h='<thead><tr><th>Feature</th><th>Profile '+A.cycle+' ('+shortDate(A)+')</th><th>Profile '+B.cycle+' ('+shortDate(B)+')</th><th>Change</th></tr></thead><tbody>';
+  rows.forEach(([n,a,b,nd])=>{
+    const ok=a!=null&&b!=null; let dlt=ok?(+b.toFixed(nd))-(+a.toFixed(nd)):null;
+    if(ok&&Math.abs(dlt)<Math.pow(10,-nd)/2) dlt=0;
+    const cls=!ok||dlt===0?'':(dlt>0?'up':'dn');
+    h+='<tr><td>'+n+'</td><td>'+(a==null?'—':a.toFixed(nd))+'</td><td>'+(b==null?'—':b.toFixed(nd))+'</td><td class="'+cls+'">'+(ok?(dlt>0?'+':dlt<0?'−':'')+Math.abs(dlt).toFixed(nd):'—')+'</td></tr>';
+  });
+  document.getElementById('chg').innerHTML=h+'</tbody>';
+}
+function cmpLegend(){
+  const A=PROFILES[C.a],B=PROFILES[C.b];
+  const html='<span style="color:'+css('--pa')+'"><i class="sw dash"></i><span style="color:var(--ink)">Profile '+A.cycle+' ('+shortDate(A)+')</span></span>'+
+    '<span style="color:'+css('--pb')+'"><i class="sw"></i><span style="color:var(--ink)">Profile '+B.cycle+' ('+shortDate(B)+')</span></span>';
+  document.getElementById('cmpLegend').innerHTML=html;
+}
+function dsA(p,k,maxD,small){return ds(pts(p,k,maxD),'Profile '+p.cycle,css('--pa'),'x',{borderDash:[7,4],pointStyle:'rect',pointRadius:small?0:3,borderWidth:small?2:2.5,backgroundColor:css('--surface')});}
+function dsB(p,k,maxD,small){return ds(pts(p,k,maxD),'Profile '+p.cycle,css('--pb'),'x',{pointRadius:small?0:3,borderWidth:small?2:2.5});}
+
+function buildCompare(){
+  cmpCharts.forEach(c=>c.destroy()); cmpCharts=[];
+  const v=byKey[C.v],A=PROFILES[C.a],B=PROFILES[C.b];
+  const ov=C.mode==='overlay';
+  document.getElementById('overlayBox').hidden=!ov; document.getElementById('sideBox').hidden=ov;
+  const opts=(sets,xExtra)=>({type:'scatter',data:{datasets:sets},options:{responsive:true,maintainAspectRatio:false,animation:false,
+    interaction:{mode:'nearest',axis:'y',intersect:false},plugins:{legend:{display:false},tooltip:{callbacks:tipCb()}},
+    scales:{y:yAxis(C.d),x:xAxis(v,'bottom',xExtra)}}});
+  if(ov){
+    cmpCharts.push(new Chart(document.getElementById('cmpMain'),opts([dsA(A,v.k,C.d),dsB(B,v.k,C.d)])));
+  } else {
+    const all=[...pts(A,v.k,C.d),...pts(B,v.k,C.d)].map(p=>p.x);
+    let lo=Math.min(...all),hi=Math.max(...all),pad=(hi-lo)*0.05||0.1; const ext={min:lo-pad,max:hi+pad};
+    document.getElementById('sideA').textContent='Profile '+A.cycle+' ('+shortDate(A)+')';
+    document.getElementById('sideB').textContent='Profile '+B.cycle+' ('+shortDate(B)+')';
+    cmpCharts.push(new Chart(document.getElementById('cmpA'),opts([dsA(A,v.k,C.d)],ext)));
+    cmpCharts.push(new Chart(document.getElementById('cmpB'),opts([dsB(B,v.k,C.d)],ext)));
+  }
+  let note=v.d;
+  if(!ov) note+=' Both panels use the same horizontal scale, so you can compare them fairly.';
+  if(v.q) note+=' This sensor is still unadjusted, but the same offset applies to both profiles.';
+  document.getElementById('cmpNote').textContent=note;
+}
+function buildCmpGrid(){
+  const g=document.getElementById('cmpGrid');
+  gridCards(g,v=>{C.v=v.k; document.getElementById('selV').value=v.k; buildCompare();
+    document.getElementById('cmpLegend').scrollIntoView({behavior:reduceMotion()?'auto':'smooth',block:'start'});});
+  cmpMini.forEach(c=>c.destroy()); cmpMini=[];
+  const A=PROFILES[C.a],B=PROFILES[C.b];
+  [...g.querySelectorAll('canvas')].forEach((cv,i)=>{const v=VARS[i]; cmpMini.push(miniChart(cv,[dsA(A,v.k,1500,true),dsB(B,v.k,1500,true)],v));});
+}
+function buildCmpTS(){
+  const A=PROFILES[C.a],B=PROFILES[C.b];
+  const mk=p=>p.rows.map(r=>({x:r.s,y:r.t,z:r.z}));
+  cmpMini.push(new Chart(document.getElementById('cmpTS'),{type:'scatter',data:{datasets:[
+      ds(mk(A),'Profile '+A.cycle,css('--pa'),'x',{borderDash:[7,4],pointStyle:'rect',pointRadius:3,backgroundColor:css('--surface'),borderWidth:2}),
+      ds(mk(B),'Profile '+B.cycle,css('--pb'),'x',{pointRadius:3,borderWidth:2})]},
+    options:{responsive:true,maintainAspectRatio:false,animation:false,
+      plugins:{legend:{display:true,position:'top',labels:{color:css('--ink'),usePointStyle:true}},
+        tooltip:{callbacks:{label:(i)=>' '+i.dataset.label+', '+i.raw.z.toFixed(0)+' m: '+i.raw.y+' °C, '+i.raw.x+' PSS'}}},scales:tsScales()}}));
+}
+function syncCmpSelects(){
+  pdOptions(document.getElementById('selPA'),C.a,C.b);
+  pdOptions(document.getElementById('selPB'),C.b,C.a);
+  document.getElementById('selV').innerHTML=VARS.map(v=>'<option value="'+v.k+'"'+(v.k===C.v?' selected':'')+'>'+v.name+'</option>').join('');
+}
+function renderCompare(){
+  if(PROFILES.length<2) return;
+  if(C.a>C.b){const t=C.a;C.a=C.b;C.b=t;}
+  syncCmpSelects(); cmpFacts(); changeTable(); cmpLegend(); buildCompare(); buildCmpGrid(); buildCmpTS();
+}
+
+/* ================= wiring ================= */
+let view='one';
+function showView(v){
+  view=v;
+  document.getElementById('view-one').hidden=v!=='one';
+  document.getElementById('view-cmp').hidden=v!=='cmp';
+  document.getElementById('tab-one').setAttribute('aria-selected',v==='one');
+  document.getElementById('tab-cmp').setAttribute('aria-selected',v==='cmp');
+  try{history.replaceState(null,'',v==='cmp'?'#compare':'#');}catch(e){}
+  renderAll();
+}
+function renderAll(){baseFont(); if(view==='one') renderOne(); else renderCompare();}
+
+document.getElementById('tab-one').addEventListener('click',()=>showView('one'));
+document.getElementById('tab-cmp').addEventListener('click',()=>showView('cmp'));
+if(PROFILES.length<2) document.getElementById('tab-cmp').hidden=true;
+if(PENDING.length){const el=document.getElementById('pending'); el.hidden=false; el.style.marginTop='8px';
+  el.innerHTML='<b>Coming soon:</b> '+PENDING.map(p=>'profile '+p.cycle+' ('+shortDate(p)+')').join(', ')+' is on its way: the float has sent only part of that dive so far. It will appear here automatically once the whole profile is in.';}
+
+pdOptions(document.getElementById('selP'),S.p);
+document.getElementById('selP').addEventListener('change',e=>{S.p=+e.target.value; renderOne();});
+document.getElementById('selA').addEventListener('change',e=>{S.a=e.target.value; if(S.b===S.a) S.b=''; syncSelects(); buildMain();});
+document.getElementById('selB').addEventListener('change',e=>{S.b=e.target.value; buildMain();});
+document.getElementById('feat').addEventListener('change',e=>{S.feat=e.target.checked; buildMain();});
+document.getElementById('ghost').addEventListener('change',e=>{S.ghost=e.target.checked; buildMain();});
+document.querySelectorAll('[data-range]').forEach(g=>g.querySelectorAll('button').forEach(btn=>btn.addEventListener('click',()=>{
+  setPressed(g,btn); if(g.dataset.range==='one'){S.d=+btn.dataset.d; buildMain();} else {C.d=+btn.dataset.d; buildCompare();}})));
+document.getElementById('selPA').addEventListener('change',e=>{C.a=+e.target.value; renderCompare();});
+document.getElementById('selPB').addEventListener('change',e=>{C.b=+e.target.value; renderCompare();});
+document.getElementById('selV').addEventListener('change',e=>{C.v=e.target.value; buildCompare();});
+document.querySelectorAll('#cmpMode button').forEach(btn=>btn.addEventListener('click',()=>{setPressed(document.getElementById('cmpMode'),btn); C.mode=btn.dataset.m; buildCompare();}));
+/*DARK-JS-START*/
+matchMedia('(prefers-color-scheme: dark)').addEventListener('change',renderAll);
+new MutationObserver(renderAll).observe(document.documentElement,{attributes:true,attributeFilter:['data-theme']});
+/*DARK-JS-END*/
+
+syncSelects();
+if(location.hash==='#compare'&&PROFILES.length>1) view='cmp';
+function start(){showView(view);}
+if(document.fonts&&document.fonts.ready){document.fonts.ready.then(start);} else start();
+</script>
+</body>
+</html>

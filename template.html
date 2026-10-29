@@ -1,0 +1,600 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Big Blue Profiles</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:ital,wght@0,400;0,700;1,400&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<style>
+:root{
+  --bg:#EAF1F4; --surface:#FFFFFF; --ink:#0F2A3D; --muted:#4D6577; --line:#C6D5DD; --accent:#0B6B87; --band:rgba(11,107,135,.09); --ghost:#9AAAB5;
+  --pa:#B5651D; --pb:#0B6B87;
+  --c-t:#C93C4F; --c-s:#22897D; --c-sig:#6B4F8C; --c-o2:#2F6FC9; --c-o2s:#5B8BD6; --c-no3:#8A4FD1; --c-chl:#2E8B37; --c-bbp:#9A6B3F; --c-ph:#C77C14; --c-irr:#B89500;
+  box-sizing:border-box; padding-top:env(safe-area-inset-top,0px); padding-bottom:env(safe-area-inset-bottom,0px);
+  color-scheme:light;
+}
+/*DARK-START*/
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#0B1A25; --surface:#122838; --ink:#E2EDF2; --muted:#93AABA; --line:#2B4558; --accent:#5CC2DF; --band:rgba(92,194,223,.10); --ghost:#5E7889;
+    --pa:#E5A15C; --pb:#5CC2DF;
+    --c-t:#F0707F; --c-s:#4FC4B4; --c-sig:#B79BDB; --c-o2:#73A8F0; --c-o2s:#97BDF2; --c-no3:#BC8BF2; --c-chl:#62C46B; --c-bbp:#D3A274; --c-ph:#F0AE4A; --c-irr:#E8CC3A;
+    color-scheme:dark;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#0B1A25; --surface:#122838; --ink:#E2EDF2; --muted:#93AABA; --line:#2B4558; --accent:#5CC2DF; --band:rgba(92,194,223,.10); --ghost:#5E7889;
+  --pa:#E5A15C; --pb:#5CC2DF;
+  --c-t:#F0707F; --c-s:#4FC4B4; --c-sig:#B79BDB; --c-o2:#73A8F0; --c-o2s:#97BDF2; --c-no3:#BC8BF2; --c-chl:#62C46B; --c-bbp:#D3A274; --c-ph:#F0AE4A; --c-irr:#E8CC3A;
+  color-scheme:dark;
+}
+/*DARK-END*/
+*,*::before,*::after{box-sizing:inherit}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:"Atkinson Hyperlegible",system-ui,-apple-system,"Segoe UI",sans-serif;font-size:17px;line-height:1.5}
+.wrap{max-width:1120px;margin:0 auto;padding:0 16px 64px}
+header{padding:32px 0 20px}
+h1{font-size:clamp(28px,5vw,46px);line-height:1.08;margin:0 0 10px;font-weight:700;letter-spacing:-.01em}
+.sub{color:var(--muted);margin:0;max-width:70ch}
+.tabs{display:flex;gap:4px;border-bottom:2px solid var(--line);margin:22px 0 26px}
+.tabs button{font:inherit;font-size:17px;font-weight:700;background:none;border:0;color:var(--muted);padding:10px 16px;cursor:pointer;border-bottom:3px solid transparent;margin-bottom:-2px}
+.tabs button[aria-selected="true"]{color:var(--ink);border-bottom-color:var(--accent)}
+.facts{display:flex;flex-wrap:wrap;gap:6px 26px;margin:0 0 6px;padding:0;list-style:none;color:var(--muted);font-size:15px}
+.facts b{color:var(--ink)}
+h2{font-size:24px;margin:40px 0 6px;line-height:1.2}
+.lede{color:var(--muted);margin:0 0 16px;max-width:70ch}
+.panel{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:18px}
+.controls{display:flex;flex-wrap:wrap;gap:14px 22px;align-items:flex-end;margin-bottom:14px}
+.ctl{display:flex;flex-direction:column;gap:4px;font-size:14px;color:var(--muted)}
+select{font:inherit;font-size:16px;color:var(--ink);background:var(--bg);border:1px solid var(--line);border-radius:6px;padding:7px 10px;min-width:190px}
+.seg{display:inline-flex;border:1px solid var(--line);border-radius:6px;overflow:hidden}
+.seg button{font:inherit;font-size:15px;background:var(--bg);color:var(--ink);border:0;padding:7px 12px;cursor:pointer}
+.seg button+button{border-left:1px solid var(--line)}
+.seg button[aria-pressed="true"]{background:var(--accent);color:var(--surface)}
+label.chk{display:flex;gap:8px;align-items:center;font-size:15px;color:var(--ink);padding:7px 0;cursor:pointer}
+button:focus-visible,select:focus-visible,input:focus-visible,summary:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
+.main-chart{position:relative;height:min(640px,78vh);min-height:420px}
+.note{font-size:15px;color:var(--muted);margin:12px 0 0;max-width:72ch}
+.legend{display:flex;flex-wrap:wrap;gap:6px 22px;font-size:15px;margin:0 0 10px}
+.legend span{display:inline-flex;align-items:center;gap:8px}
+.sw{width:28px;height:0;border-top:3px solid currentColor;display:inline-block}
+.sw.dash{border-top-style:dashed}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:14px}
+.mini{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:12px 12px 8px;cursor:pointer;text-align:left;font:inherit;color:inherit}
+.mini:hover{border-color:var(--accent)}
+.mini h3{margin:0;font-size:16px;display:flex;align-items:center;gap:8px}
+.mini h3 i{width:12px;height:12px;border-radius:50%;flex:none}
+.mini p{margin:0 0 6px;font-size:13px;color:var(--muted)}
+.mini .cv{position:relative;height:280px}
+.flag{font-size:12px;border:1px solid var(--line);border-radius:4px;padding:0 6px;margin-left:auto;font-weight:400;background:var(--bg)}
+.two{display:grid;grid-template-columns:minmax(0,1.3fr) minmax(0,1fr);gap:24px;align-items:start}
+.pair{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+.pair h3{margin:0 0 6px;font-size:16px}
+.pair .cv{position:relative;height:min(600px,74vh);min-height:400px}
+@media (max-width:820px){.two,.pair{grid-template-columns:1fr}}
+.ts-chart{position:relative;height:460px}
+.ramp{height:10px;border-radius:5px;margin:8px 0 2px;background:linear-gradient(90deg,#F2C14E,#E07A3F,#9C3D6E,#3C2F7A,#13234B)}
+.ramp-l{display:flex;justify-content:space-between;font-size:13px;color:var(--muted)}
+ol.qs{padding-left:22px;margin:0;max-width:72ch}
+ol.qs li{margin:0 0 12px}
+details{margin-top:12px}
+summary{cursor:pointer;font-weight:700}
+.tbl{overflow-x:auto;margin-top:10px}
+table{border-collapse:collapse;font-size:14px;font-variant-numeric:tabular-nums}
+.data td,.data th{white-space:nowrap}
+th,td{padding:6px 10px;text-align:right;border-bottom:1px solid var(--line)}
+th{background:var(--surface)}
+.chg th:first-child,.chg td:first-child{text-align:left;white-space:normal}
+.chg{font-size:15px;width:100%;max-width:820px}
+.chg td.up{color:var(--c-t)} .chg td.dn{color:var(--c-o2)}
+.dq{border-left:4px solid var(--c-ph);padding:4px 0 4px 14px;max-width:72ch}
+.dq p{margin:0 0 8px}
+footer{margin-top:48px;color:var(--muted);font-size:14px;border-top:1px solid var(--line);padding-top:16px}
+[hidden]{display:none!important}
+</style>
+</head>
+<body>
+<div class="wrap">
+<header>
+  <h1>Big Blue beneath the Coral Sea</h1>
+  <p class="sub">Every ten days our float sinks to 2,000 m, rises to the surface, and radios home what it measured on the way up. This page updates itself when new dives arrive.</p>
+  <p class="sub" id="pending" hidden></p>
+</header>
+
+<div class="tabs" role="tablist">
+  <button role="tab" id="tab-one" aria-controls="view-one" aria-selected="true">Explore one profile</button>
+  <button role="tab" id="tab-cmp" aria-controls="view-cmp" aria-selected="false">Compare profiles</button>
+</div>
+
+<!-- ============ EXPLORE ONE PROFILE ============ -->
+<div id="view-one" role="tabpanel" aria-labelledby="tab-one">
+  <div class="controls">
+    <label class="ctl">Profile
+      <select id="selP"></select>
+    </label>
+  </div>
+  <ul class="facts" id="facts"></ul>
+
+  <section>
+    <h2>Profile explorer</h2>
+    <p class="lede">Depth runs down the side, like the real ocean. Pick a variable, then add a second one on the top axis to see how two properties line up with depth.</p>
+    <div class="panel">
+      <div class="controls">
+        <label class="ctl">Bottom axis <select id="selA"></select></label>
+        <label class="ctl">Compare with (top axis) <select id="selB"></select></label>
+        <div class="ctl">Depth range
+          <div class="seg" data-range="one">
+            <button data-d="200" aria-pressed="false">0–200 m</button>
+            <button data-d="600" aria-pressed="false">0–600 m</button>
+            <button data-d="1500" aria-pressed="true">Full 1,500 m</button>
+          </div>
+        </div>
+        <label class="chk"><input type="checkbox" id="feat" checked> Mark key features</label>
+        <label class="chk" id="ghostWrap"><input type="checkbox" id="ghost"> Show previous profile</label>
+      </div>
+      <div class="legend" id="ghostLegend" hidden></div>
+      <div class="main-chart"><canvas id="main" aria-label="Depth profile chart"></canvas></div>
+      <p class="note" id="mainNote"></p>
+    </div>
+  </section>
+
+  <section>
+    <h2>All variables at a glance</h2>
+    <p class="lede">Each panel shows one sensor from surface to bottom. Select a panel to open it in the explorer above.</p>
+    <div class="grid" id="grid"></div>
+  </section>
+
+  <section>
+    <h2>Temperature–salinity diagram</h2>
+    <div class="two">
+      <div class="panel">
+        <div class="ts-chart"><canvas id="ts" aria-label="Temperature versus salinity diagram"></canvas></div>
+        <div class="ramp" aria-hidden="true"></div>
+        <div class="ramp-l"><span>Point color: surface</span><span>1,500 m</span></div>
+      </div>
+      <div>
+        <p class="lede" style="margin-top:0">Oceanographers identify water masses by their temperature and salinity, which stay nearly fixed once water sinks away from the surface. Each bend in this curve is a different body of water stacked in the column.</p>
+        <p class="lede">Follow the points from warm (top) to cold (bottom). Find the highest and lowest salinity, and check their depths in the explorer. Those two bends are water that formed in very different parts of the Pacific.</p>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <h2>Questions to explore</h2>
+    <ol class="qs">
+      <li>Temperature barely changes in the top 40–50 m or so, then drops. What mixes this surface layer, and about how thick is it?</li>
+      <li>Chlorophyll is low at the surface but peaks near 110 m. Why would phytoplankton grow best so far below the sunlit surface? Compare the chlorophyll and nitrate profiles to build your argument.</li>
+      <li>Oxygen drops below the chlorophyll peak, reaches a low near 200 m, then rises again around 600 m. What processes remove oxygen at mid-depths, and what might explain the higher oxygen deeper down?</li>
+      <li>pH falls from about 8.04 at the surface to about 7.86 at 1,500 m. Using the oxygen and nitrate profiles, explain how decomposition of sinking organic matter could lower pH at depth.</li>
+      <li>The light sensor reads essentially zero at every depth. Look at the local time of the profile. Why?</li>
+      <li>Particle backscatter (a proxy for particles in the water) peaks a little deeper than chlorophyll. What kinds of particles might it be detecting?</li>
+    </ol>
+  </section>
+
+  <section>
+    <details>
+      <summary>Show the data table for this profile</summary>
+      <div class="tbl"><table class="data" id="tbl"></table></div>
+    </details>
+  </section>
+</div>
+
+<!-- ============ COMPARE ============ -->
+<div id="view-cmp" role="tabpanel" aria-labelledby="tab-cmp" hidden>
+  <div class="controls">
+    <label class="ctl">Earlier profile <select id="selPA"></select></label>
+    <label class="ctl">Later profile <select id="selPB"></select></label>
+  </div>
+  <ul class="facts" id="cmpFacts"></ul>
+
+  <section>
+    <h2>What changed</h2>
+    <p class="lede">Key features found automatically in each profile. Check them against the plots below.</p>
+    <div class="tbl"><table class="chg" id="chg"></table></div>
+  </section>
+
+  <section>
+    <h2>Profiles head to head</h2>
+    <div class="panel">
+      <div class="controls">
+        <label class="ctl">Variable <select id="selV"></select></label>
+        <div class="ctl">View
+          <div class="seg" id="cmpMode">
+            <button data-m="overlay" aria-pressed="true">Overlay</button>
+            <button data-m="side" aria-pressed="false">Side by side</button>
+          </div>
+        </div>
+        <div class="ctl">Depth range
+          <div class="seg" data-range="cmp">
+            <button data-d="200" aria-pressed="false">0–200 m</button>
+            <button data-d="600" aria-pressed="true">0–600 m</button>
+            <button data-d="1500" aria-pressed="false">Full 1,500 m</button>
+          </div>
+        </div>
+      </div>
+      <div class="legend" id="cmpLegend"></div>
+      <div id="overlayBox" class="main-chart"><canvas id="cmpMain" aria-label="Overlay of two profiles"></canvas></div>
+      <div id="sideBox" class="pair" hidden>
+        <div><h3 id="sideA"></h3><div class="cv"><canvas id="cmpA"></canvas></div></div>
+        <div><h3 id="sideB"></h3><div class="cv"><canvas id="cmpB"></canvas></div></div>
+      </div>
+      <p class="note" id="cmpNote"></p>
+    </div>
+  </section>
+
+  <section>
+    <h2>Every variable, both profiles</h2>
+    <p class="lede">Select a panel to open it in the comparison above.</p>
+    <div class="grid" id="cmpGrid"></div>
+  </section>
+
+  <section>
+    <h2>T–S diagrams compared</h2>
+    <div class="two">
+      <div class="panel"><div class="ts-chart"><canvas id="cmpTS" aria-label="Temperature-salinity diagrams for both profiles"></canvas></div></div>
+      <div>
+        <p class="lede" style="margin-top:0">Below about 600 m the two curves sit almost on top of each other: the deep water masses haven't changed. Look at the warm, salty end of the curve. Where do the two profiles part ways?</p>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <h2>Questions to explore</h2>
+    <ol class="qs">
+      <li>Check the drift distance at the top of this tab. Is the change you see in the upper 200 m more likely to come from the float moving or from the ocean changing between dives? What evidence supports your answer?</li>
+      <li>Did the surface mixed layer get deeper or shallower? What weather would cause that change? (Hint: think about wind, heating, and the season in the Southern Hemisphere.)</li>
+      <li>The chlorophyll peak changed in both depth and strength. Compare it with where nitrate starts to rise in each profile. How are the two linked?</li>
+      <li>Below 600 m the profiles nearly match. Why does deep water change so much more slowly than surface water?</li>
+      <li>Find one difference that could be sensor noise rather than a real change. How would you decide?</li>
+    </ol>
+  </section>
+</div>
+
+<section>
+  <h2>A note on data quality</h2>
+  <div class="dq">
+    <p>These are raw, real-time data. The data center still marks <b>oxygen, nitrate, chlorophyll, and pH</b> as unadjusted because those sensors haven't been checked against reference measurements yet. The shapes of the profiles are reliable, but exact values may shift once corrections are applied. Temperature, salinity, pressure, and backscatter are good.</p>
+    <p>Two things to watch: surface oxygen saturation reads about 92% when well-mixed surface water is normally near 100%, and surface nitrate reads about 1.2 µmol/kg in water that is usually almost nitrate-free. Both are typical raw-sensor offsets on a new float. Because the same offset appears in every profile, comparing one profile with another is still meaningful.</p>
+  </div>
+</section>
+
+<footer>Data: GO-BGC / MBARI FloatViz file for float WMO 1902753 (UW 23357), file dated __FILEDATE__. This page checks for new dives every day; last checked __DLDATE__. Backscatter is shown ×10⁻⁴ so the numbers are easier to read. Swampscott High School adopted this float through the Adopt a Float program.</footer>
+</div>
+
+<script>
+const PROFILES = __DATA__;
+const PENDING = __PENDING__;
+
+const VARS = [
+  {k:'t',   name:'Temperature',          unit:'°C',           c:'--c-t',   q:false, d:'Warm surface water sits on top of cold deep water.'},
+  {k:'s',   name:'Salinity',             unit:'PSS-78',       c:'--c-s',   q:false, d:'Look for a salty layer near 190 m and a fresher layer near 800 m.'},
+  {k:'sig', name:'Density (σθ)',         unit:'kg/m³ − 1000', c:'--c-sig', q:false, d:'Density increases with depth; the steep zone is the pycnocline.'},
+  {k:'o2',  name:'Dissolved oxygen',     unit:'µmol/kg',      c:'--c-o2',  q:true,  d:'High near the surface, a low near 200 m, a second high near 600 m.'},
+  {k:'o2s', name:'Oxygen saturation',    unit:'%',            c:'--c-o2s', q:true,  d:'Percent of the oxygen the water could hold at its temperature and salinity.'},
+  {k:'no3', name:'Nitrate',              unit:'µmol/kg',      c:'--c-no3', q:true,  d:'A key nutrient; nearly used up at the surface, abundant at depth.'},
+  {k:'chl', name:'Chlorophyll a',        unit:'mg/m³',        c:'--c-chl', q:true,  d:'A proxy for phytoplankton; note the deep chlorophyll maximum.'},
+  {k:'bbp', name:'Particle backscatter', unit:'×10⁻⁴ m⁻¹',    c:'--c-bbp', q:false, d:'How much red light bounces off particles in the water.'},
+  {k:'ph',  name:'pH',                   unit:'total scale',  c:'--c-ph',  q:true,  d:'Seawater acidity measured in place.'},
+  {k:'irr', name:'Light (PAR)', unit:'µmol photons/m²/s', c:'--c-irr', q:false, d:'Sunlight available for photosynthesis, measured only above about 450 m. Check the local time: a night-time dive reads only sensor noise near zero.'}
+];
+const byKey = Object.fromEntries(VARS.map(v=>[v.k,v]));
+const MON=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+
+/* ---------- helpers ---------- */
+function css(n){return getComputedStyle(document.documentElement).getPropertyValue(n).trim();}
+function utcDate(p){return new Date(p.utc+':00Z');}
+function shortDate(p){const d=utcDate(p);return MON[d.getUTCMonth()]+' '+d.getUTCDate();}
+function plabel(i){const p=PROFILES[i];return 'Profile '+p.cycle+' ('+shortDate(p)+(i===PROFILES.length-1?', newest':'')+')';}
+function localTime(p){
+  const d=new Date(utcDate(p).getTime()+p.lon/15*3600e3);
+  let h=d.getUTCHours(), ap=h<12?'am':'pm'; h=h%12||12;
+  return 'about '+h+' '+ap+' '+MON[d.getUTCMonth()]+' '+d.getUTCDate()+' local';
+}
+function fmtLat(v){return Math.abs(v).toFixed(2)+'° '+(v<0?'S':'N');}
+function fmtLon(v){return Math.abs(v).toFixed(2)+'° '+(v<0?'W':'E');}
+function pts(p,k,maxD){return p.rows.filter(r=>r[k]!==null && r.z<=maxD+5).map(r=>({x:r[k],y:r.z}));}
+function haversine(a,b){const R=6371,t=Math.PI/180,dl=(b.lat-a.lat)*t,dn=(b.lon-a.lon)*t;
+  const h=Math.sin(dl/2)**2+Math.cos(a.lat*t)*Math.cos(b.lat*t)*Math.sin(dn/2)**2;return 2*R*Math.asin(Math.sqrt(h));}
+function bearingWord(a,b){const t=Math.PI/180,y=Math.sin((b.lon-a.lon)*t)*Math.cos(b.lat*t),
+  x=Math.cos(a.lat*t)*Math.sin(b.lat*t)-Math.sin(a.lat*t)*Math.cos(b.lat*t)*Math.cos((b.lon-a.lon)*t);
+  const deg=(Math.atan2(y,x)/t+360)%360;
+  return ['north','north-northeast','northeast','east-northeast','east','east-southeast','southeast','south-southeast','south','south-southwest','southwest','west-southwest','west','west-northwest','northwest','north-northwest'][Math.round(deg/22.5)%16];}
+
+/* ---------- automatic feature detection ---------- */
+function interpDepth(r1,r2,k,target){const f=(target-r1[k])/(r2[k]-r1[k]);return r1.z+f*(r2.z-r1.z);}
+function features(p){
+  const R=p.rows, f={};
+  // mixed layer: temperature 0.2 °C colder than at ~10 m
+  let ref=R.reduce((a,r)=>Math.abs(r.z-10)<Math.abs(a.z-10)?r:a), thr=ref.t-0.2;
+  for(let i=1;i<R.length;i++){ if(R[i].z>ref.z && R[i].t<thr){ f.mld=interpDepth(R[i-1],R[i],'t',thr); break; } }
+  const inR=(lo,hi,k)=>R.filter(r=>r.z>=lo&&r.z<=hi&&r[k]!==null);
+  const mx=(arr,k)=>arr.reduce((a,r)=>r[k]>a[k]?r:a), mn=(arr,k)=>arr.reduce((a,r)=>r[k]<a[k]?r:a);
+  f.chlMax=mx(inR(0,400,'chl'),'chl');
+  f.salMax=mx(inR(50,400,'s'),'s');
+  f.salMin=mn(inR(400,1500,'s'),'s');
+  f.o2Min=mn(inR(150,500,'o2'),'o2');
+  f.o2Int=mx(inR(450,900,'o2'),'o2');
+  const surfN=R[0].no3;
+  const nc=R.find(r=>r.no3!==null && r.no3>surfN+2); f.nitracline=nc?nc.z:null;
+  f.surf=R[0]; f.deep=R[R.length-1];
+  return f;
+}
+const FEAT = PROFILES.map(features);
+
+function featureList(i){
+  const f=FEAT[i], L=[];
+  if(f.mld) L.push({z:[0,f.mld],label:'Surface mixed layer',band:true});
+  L.push({z:f.chlMax.z,label:'Chlorophyll peak'});
+  L.push({z:f.salMax.z,label:'Salinity maximum'});
+  L.push({z:f.o2Min.z,label:'Oxygen minimum'});
+  L.push({z:f.salMin.z,label:'Salinity minimum'});
+  return L;
+}
+
+const featurePlugin = {
+  id:'features',
+  beforeDatasetsDraw(chart,args,opts){
+    if(!opts||!opts.list) return;
+    const {ctx,chartArea:a,scales:{y}}=chart;
+    ctx.save(); ctx.font='13px "Atkinson Hyperlegible", system-ui, sans-serif'; ctx.textAlign='right';
+    opts.list.forEach(f=>{
+      if(f.band){
+        const y0=y.getPixelForValue(f.z[0]), y1=y.getPixelForValue(Math.min(f.z[1],y.max));
+        ctx.fillStyle=css('--band'); ctx.fillRect(a.left,y0,a.right-a.left,y1-y0);
+        ctx.fillStyle=css('--muted'); ctx.fillText(f.label+' (~'+Math.round(f.z[1])+' m)',a.right-6,y1-6);
+      } else if(f.z<=y.max){
+        const py=y.getPixelForValue(f.z);
+        ctx.strokeStyle=css('--muted'); ctx.setLineDash([5,4]); ctx.lineWidth=1;
+        ctx.beginPath(); ctx.moveTo(a.left,py); ctx.lineTo(a.right,py); ctx.stroke();
+        ctx.setLineDash([]); ctx.fillStyle=css('--muted'); ctx.fillText(f.label+' (~'+Math.round(f.z)+' m)',a.right-6,py-5);
+      }
+    });
+    ctx.restore();
+  }
+};
+Chart.register(featurePlugin);
+
+function baseFont(){Chart.defaults.font.family='"Atkinson Hyperlegible", system-ui, sans-serif';Chart.defaults.color=css('--muted');Chart.defaults.borderColor=css('--line');}
+function ds(data,label,col,axis,opt){return Object.assign({label,data,xAxisID:axis||'x',showLine:true,borderColor:col,backgroundColor:col,borderWidth:2.5,pointRadius:3,pointHoverRadius:6,tension:0},opt||{});}
+function yAxis(maxD,small){return {reverse:true,min:0,max:maxD,title:{display:!small,text:'Depth (m)',color:css('--ink'),font:{size:15}},grid:{color:css('--line')},ticks:small?{stepSize:maxD/3,font:{size:11}}:{}};}
+function xAxis(v,pos,extra){return Object.assign({type:'linear',position:pos||'bottom',title:{display:true,text:v.name+' ('+v.unit+')',color:css(v.c),font:{size:15,weight:'bold'}},grid:{color:css('--line')},ticks:{color:css(v.c)}},extra||{});}
+function tipCb(){return {title:(it)=>it[0].parsed.y.toFixed(0)+' m',label:(i)=>' '+i.dataset.label+': '+i.parsed.x};}
+function setPressed(group,btn){group.querySelectorAll('button').forEach(b=>b.setAttribute('aria-pressed',b===btn?'true':'false'));}
+function pdOptions(sel,val,exclude){sel.innerHTML=PROFILES.map((p,i)=>i===exclude?'':'<option value="'+i+'"'+(i===val?' selected':'')+'>'+plabel(i)+'</option>').join('');}
+const reduceMotion=()=>matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+/* ================= EXPLORE ONE ================= */
+const S={p:PROFILES.length-1,a:'t',b:'chl',d:1500,feat:true,ghost:false};
+let mainChart,miniCharts=[],tsChart;
+
+function renderFacts(){
+  const p=PROFILES[S.p];
+  document.getElementById('facts').innerHTML=
+    '<li>Float <b>WMO 1902753</b></li><li>Profile <b>#'+p.cycle+'</b></li>'+
+    '<li><b>'+shortDate(p)+', 2026</b>, '+p.utc.slice(11)+' UTC ('+localTime(p)+')</li>'+
+    (p.posEst?'<li>Position not reported this dive (last known: <b>'+fmtLat(p.lat)+', '+fmtLon(p.lon)+'</b>)</li>':'<li><b>'+fmtLat(p.lat)+', '+fmtLon(p.lon)+'</b></li>')+
+    '<li>Surface to <b>'+Math.round(p.rows[p.rows.length-1].z).toLocaleString()+' m</b>, '+p.rows.length+' sample depths</li>';
+  const gw=document.getElementById('ghostWrap'); gw.hidden=S.p===0; if(S.p===0) S.ghost=false;
+  document.getElementById('ghost').checked=S.ghost;
+}
+
+function buildMain(){
+  if(mainChart) mainChart.destroy();
+  const p=PROFILES[S.p], A=byKey[S.a], B=S.b?byKey[S.b]:null;
+  const sets=[], scales={y:yAxis(S.d), x:xAxis(A)};
+  const prev=S.ghost&&S.p>0?PROFILES[S.p-1]:null;
+  if(prev){
+    sets.push(ds(pts(prev,A.k,S.d),'Profile '+prev.cycle+' '+A.name,css('--ghost'),'x',{borderDash:[6,4],pointRadius:0,borderWidth:2,order:5}));
+    if(B) sets.push(ds(pts(prev,B.k,S.d),'Profile '+prev.cycle+' '+B.name,css('--ghost'),'x2',{borderDash:[2,3],pointRadius:0,borderWidth:2,order:5}));
+  }
+  sets.push(ds(pts(p,A.k,S.d),A.name+' ('+A.unit+')',css(A.c),'x'));
+  if(B){ sets.push(ds(pts(p,B.k,S.d),B.name+' ('+B.unit+')',css(B.c),'x2')); scales.x2=xAxis(B,'top',{grid:{drawOnChartArea:false}}); }
+  mainChart=new Chart(document.getElementById('main'),{type:'scatter',data:{datasets:sets},
+    options:{responsive:true,maintainAspectRatio:false,animation:false,interaction:{mode:'nearest',axis:'y',intersect:false},
+      plugins:{legend:{display:false},features:{list:S.feat?featureList(S.p):null},tooltip:{callbacks:tipCb()}},scales}});
+  const lg=document.getElementById('ghostLegend');
+  lg.hidden=!prev;
+  if(prev) lg.innerHTML='<span style="color:'+css(A.c)+'"><i class="sw"></i><span style="color:var(--ink)">Profile '+p.cycle+' ('+shortDate(p)+')</span></span>'+
+    '<span style="color:'+css('--ghost')+'"><i class="sw dash"></i><span style="color:var(--ink)">Profile '+prev.cycle+' ('+shortDate(prev)+'), gray</span></span>';
+  let note=A.d+(B?' '+B.d:'');
+  if(A.q||(B&&B.q)) note+=' Values for unadjusted sensors are preliminary (see the data-quality note).';
+  document.getElementById('mainNote').textContent=note;
+}
+
+function miniChart(cv,sets,v){
+  return new Chart(cv,{type:'scatter',data:{datasets:sets},options:{responsive:true,maintainAspectRatio:false,animation:false,
+    plugins:{legend:{display:false},tooltip:{enabled:false}},
+    scales:{y:yAxis(1500,true),x:{ticks:{maxTicksLimit:4,font:{size:11}},grid:{color:css('--line')}}}}});
+}
+function gridCards(el,onPick){
+  if(el.children.length) return;
+  VARS.forEach(v=>{
+    const b=document.createElement('button'); b.className='mini'; b.type='button';
+    b.innerHTML='<h3><i style="background:var('+v.c+')"></i>'+v.name+(v.q?'<span class="flag">raw</span>':'')+'</h3><p>'+v.unit+'</p><div class="cv"><canvas></canvas></div>';
+    b.setAttribute('aria-label','Open '+v.name+' above');
+    b.addEventListener('click',()=>onPick(v));
+    el.appendChild(b);
+  });
+}
+function buildGrid(){
+  const g=document.getElementById('grid');
+  gridCards(g,v=>{S.a=v.k; if(S.b===v.k) S.b=''; syncSelects(); buildMain();
+    document.getElementById('main').scrollIntoView({behavior:reduceMotion()?'auto':'smooth',block:'center'});});
+  miniCharts.forEach(c=>c.destroy()); miniCharts=[];
+  const p=PROFILES[S.p];
+  [...g.querySelectorAll('canvas')].forEach((cv,i)=>{const v=VARS[i];
+    miniCharts.push(miniChart(cv,[ds(pts(p,v.k,1500),v.name,css(v.c),'x',{pointRadius:1.5,borderWidth:2})],v));});
+}
+
+function depthColor(z){
+  const st=[[0,[242,193,78]],[150,[224,122,63]],[400,[156,61,110]],[800,[60,47,122]],[1500,[19,35,75]]];
+  for(let i=0;i<st.length-1;i++){const [z0,c0]=st[i],[z1,c1]=st[i+1]; if(z<=z1){const f=(z-z0)/(z1-z0);return 'rgb('+c0.map((c,j)=>Math.round(c+(c1[j]-c)*f)).join(',')+')';}}
+  return 'rgb(19,35,75)';
+}
+function tsScales(){return {x:{title:{display:true,text:'Salinity (PSS-78)',color:css('--c-s'),font:{size:15,weight:'bold'}},grid:{color:css('--line')}},
+  y:{title:{display:true,text:'Temperature (°C)',color:css('--c-t'),font:{size:15,weight:'bold'}},grid:{color:css('--line')}}};}
+function buildTS(){
+  if(tsChart) tsChart.destroy();
+  const d=PROFILES[S.p].rows.map(r=>({x:r.s,y:r.t,z:r.z}));
+  tsChart=new Chart(document.getElementById('ts'),{type:'scatter',data:{datasets:[{data:d,showLine:true,borderColor:css('--line'),borderWidth:1.5,
+    pointRadius:5,pointHoverRadius:8,pointBackgroundColor:d.map(p=>depthColor(p.z)),pointBorderColor:d.map(p=>depthColor(p.z))}]},
+    options:{responsive:true,maintainAspectRatio:false,animation:false,
+      plugins:{legend:{display:false},tooltip:{callbacks:{label:(i)=>' '+i.raw.z.toFixed(0)+' m: '+i.raw.y+' °C, '+i.raw.x+' PSS'}}},scales:tsScales()}});
+}
+function buildTable(){
+  const cols=[['z','Depth (m)'],...VARS.map(v=>[v.k,v.name])];
+  let h='<thead><tr>'+cols.map(c=>'<th>'+c[1]+'</th>').join('')+'</tr></thead><tbody>';
+  PROFILES[S.p].rows.forEach(r=>{h+='<tr>'+cols.map(c=>'<td>'+(r[c[0]]===null?'—':r[c[0]])+'</td>').join('')+'</tr>';});
+  document.getElementById('tbl').innerHTML=h+'</tbody>';
+}
+function syncSelects(){
+  const a=document.getElementById('selA'), b=document.getElementById('selB');
+  a.innerHTML=VARS.map(v=>'<option value="'+v.k+'"'+(v.k===S.a?' selected':'')+'>'+v.name+'</option>').join('');
+  b.innerHTML='<option value="">None</option>'+VARS.filter(v=>v.k!==S.a).map(v=>'<option value="'+v.k+'"'+(v.k===S.b?' selected':'')+'>'+v.name+'</option>').join('');
+}
+function renderOne(){renderFacts(); buildMain(); buildGrid(); buildTS(); buildTable();}
+
+/* ================= COMPARE ================= */
+const C={a:Math.max(0,PROFILES.length-2),b:PROFILES.length-1,v:'chl',mode:'overlay',d:600};
+let cmpCharts=[],cmpMini=[];
+
+function cmpFacts(){
+  const A=PROFILES[C.a],B=PROFILES[C.b];
+  const days=(utcDate(B)-utcDate(A))/864e5, km=haversine(A,B);
+  document.getElementById('cmpFacts').innerHTML=
+    '<li>Time between dives: <b>'+days.toFixed(1)+' days</b></li>'+
+    ((A.posEst||B.posEst)?'<li>Drift: <b>not available</b> (the float did not report a GPS position for profile '+(A.posEst?A.cycle:B.cycle)+')</li>':
+    '<li>Drift: <b>'+km.toFixed(1)+' km</b> toward the <b>'+bearingWord(A,B)+'</b></li>'+
+    '<li>Average drift speed: <b>'+(km/days).toFixed(1)+' km/day</b></li>');
+}
+function changeTable(){
+  const fa=FEAT[C.a],fb=FEAT[C.b],A=PROFILES[C.a],B=PROFILES[C.b];
+  const rows=[
+    ['Surface temperature (°C)',fa.surf.t,fb.surf.t,2],
+    ['Surface salinity (PSS-78)',fa.surf.s,fb.surf.s,3],
+    ['Mixed layer depth (m)',fa.mld,fb.mld,0],
+    ['Chlorophyll peak (mg/m³)',fa.chlMax.chl,fb.chlMax.chl,2],
+    ['Chlorophyll peak depth (m)',fa.chlMax.z,fb.chlMax.z,0],
+    ['Top of nitracline (m), where nitrate rises 2 µmol/kg above surface',fa.nitracline,fb.nitracline,0],
+    ['Salinity maximum (PSS-78)',fa.salMax.s,fb.salMax.s,3],
+    ['Salinity maximum depth (m)',fa.salMax.z,fb.salMax.z,0],
+    ['Oxygen minimum, 150–500 m (µmol/kg)',fa.o2Min.o2,fb.o2Min.o2,1],
+    ['Oxygen minimum depth (m)',fa.o2Min.z,fb.o2Min.z,0],
+    ['Surface pH',fa.surf.ph,fb.surf.ph,3],
+    ['Temperature at 1,485 m (°C)',fa.deep.t,fb.deep.t,2]
+  ];
+  let h='<thead><tr><th>Feature</th><th>Profile '+A.cycle+' ('+shortDate(A)+')</th><th>Profile '+B.cycle+' ('+shortDate(B)+')</th><th>Change</th></tr></thead><tbody>';
+  rows.forEach(([n,a,b,nd])=>{
+    const ok=a!=null&&b!=null; let dlt=ok?(+b.toFixed(nd))-(+a.toFixed(nd)):null;
+    if(ok&&Math.abs(dlt)<Math.pow(10,-nd)/2) dlt=0;
+    const cls=!ok||dlt===0?'':(dlt>0?'up':'dn');
+    h+='<tr><td>'+n+'</td><td>'+(a==null?'—':a.toFixed(nd))+'</td><td>'+(b==null?'—':b.toFixed(nd))+'</td><td class="'+cls+'">'+(ok?(dlt>0?'+':dlt<0?'−':'')+Math.abs(dlt).toFixed(nd):'—')+'</td></tr>';
+  });
+  document.getElementById('chg').innerHTML=h+'</tbody>';
+}
+function cmpLegend(){
+  const A=PROFILES[C.a],B=PROFILES[C.b];
+  const html='<span style="color:'+css('--pa')+'"><i class="sw dash"></i><span style="color:var(--ink)">Profile '+A.cycle+' ('+shortDate(A)+')</span></span>'+
+    '<span style="color:'+css('--pb')+'"><i class="sw"></i><span style="color:var(--ink)">Profile '+B.cycle+' ('+shortDate(B)+')</span></span>';
+  document.getElementById('cmpLegend').innerHTML=html;
+}
+function dsA(p,k,maxD,small){return ds(pts(p,k,maxD),'Profile '+p.cycle,css('--pa'),'x',{borderDash:[7,4],pointStyle:'rect',pointRadius:small?0:3,borderWidth:small?2:2.5,backgroundColor:css('--surface')});}
+function dsB(p,k,maxD,small){return ds(pts(p,k,maxD),'Profile '+p.cycle,css('--pb'),'x',{pointRadius:small?0:3,borderWidth:small?2:2.5});}
+
+function buildCompare(){
+  cmpCharts.forEach(c=>c.destroy()); cmpCharts=[];
+  const v=byKey[C.v],A=PROFILES[C.a],B=PROFILES[C.b];
+  const ov=C.mode==='overlay';
+  document.getElementById('overlayBox').hidden=!ov; document.getElementById('sideBox').hidden=ov;
+  const opts=(sets,xExtra)=>({type:'scatter',data:{datasets:sets},options:{responsive:true,maintainAspectRatio:false,animation:false,
+    interaction:{mode:'nearest',axis:'y',intersect:false},plugins:{legend:{display:false},tooltip:{callbacks:tipCb()}},
+    scales:{y:yAxis(C.d),x:xAxis(v,'bottom',xExtra)}}});
+  if(ov){
+    cmpCharts.push(new Chart(document.getElementById('cmpMain'),opts([dsA(A,v.k,C.d),dsB(B,v.k,C.d)])));
+  } else {
+    const all=[...pts(A,v.k,C.d),...pts(B,v.k,C.d)].map(p=>p.x);
+    let lo=Math.min(...all),hi=Math.max(...all),pad=(hi-lo)*0.05||0.1; const ext={min:lo-pad,max:hi+pad};
+    document.getElementById('sideA').textContent='Profile '+A.cycle+' ('+shortDate(A)+')';
+    document.getElementById('sideB').textContent='Profile '+B.cycle+' ('+shortDate(B)+')';
+    cmpCharts.push(new Chart(document.getElementById('cmpA'),opts([dsA(A,v.k,C.d)],ext)));
+    cmpCharts.push(new Chart(document.getElementById('cmpB'),opts([dsB(B,v.k,C.d)],ext)));
+  }
+  let note=v.d;
+  if(!ov) note+=' Both panels use the same horizontal scale, so you can compare them fairly.';
+  if(v.q) note+=' This sensor is still unadjusted, but the same offset applies to both profiles.';
+  document.getElementById('cmpNote').textContent=note;
+}
+function buildCmpGrid(){
+  const g=document.getElementById('cmpGrid');
+  gridCards(g,v=>{C.v=v.k; document.getElementById('selV').value=v.k; buildCompare();
+    document.getElementById('cmpLegend').scrollIntoView({behavior:reduceMotion()?'auto':'smooth',block:'start'});});
+  cmpMini.forEach(c=>c.destroy()); cmpMini=[];
+  const A=PROFILES[C.a],B=PROFILES[C.b];
+  [...g.querySelectorAll('canvas')].forEach((cv,i)=>{const v=VARS[i]; cmpMini.push(miniChart(cv,[dsA(A,v.k,1500,true),dsB(B,v.k,1500,true)],v));});
+}
+function buildCmpTS(){
+  const A=PROFILES[C.a],B=PROFILES[C.b];
+  const mk=p=>p.rows.map(r=>({x:r.s,y:r.t,z:r.z}));
+  cmpMini.push(new Chart(document.getElementById('cmpTS'),{type:'scatter',data:{datasets:[
+      ds(mk(A),'Profile '+A.cycle,css('--pa'),'x',{borderDash:[7,4],pointStyle:'rect',pointRadius:3,backgroundColor:css('--surface'),borderWidth:2}),
+      ds(mk(B),'Profile '+B.cycle,css('--pb'),'x',{pointRadius:3,borderWidth:2})]},
+    options:{responsive:true,maintainAspectRatio:false,animation:false,
+      plugins:{legend:{display:true,position:'top',labels:{color:css('--ink'),usePointStyle:true}},
+        tooltip:{callbacks:{label:(i)=>' '+i.dataset.label+', '+i.raw.z.toFixed(0)+' m: '+i.raw.y+' °C, '+i.raw.x+' PSS'}}},scales:tsScales()}}));
+}
+function syncCmpSelects(){
+  pdOptions(document.getElementById('selPA'),C.a,C.b);
+  pdOptions(document.getElementById('selPB'),C.b,C.a);
+  document.getElementById('selV').innerHTML=VARS.map(v=>'<option value="'+v.k+'"'+(v.k===C.v?' selected':'')+'>'+v.name+'</option>').join('');
+}
+function renderCompare(){
+  if(PROFILES.length<2) return;
+  if(C.a>C.b){const t=C.a;C.a=C.b;C.b=t;}
+  syncCmpSelects(); cmpFacts(); changeTable(); cmpLegend(); buildCompare(); buildCmpGrid(); buildCmpTS();
+}
+
+/* ================= wiring ================= */
+let view='one';
+function showView(v){
+  view=v;
+  document.getElementById('view-one').hidden=v!=='one';
+  document.getElementById('view-cmp').hidden=v!=='cmp';
+  document.getElementById('tab-one').setAttribute('aria-selected',v==='one');
+  document.getElementById('tab-cmp').setAttribute('aria-selected',v==='cmp');
+  try{history.replaceState(null,'',v==='cmp'?'#compare':'#');}catch(e){}
+  renderAll();
+}
+function renderAll(){baseFont(); if(view==='one') renderOne(); else renderCompare();}
+
+document.getElementById('tab-one').addEventListener('click',()=>showView('one'));
+document.getElementById('tab-cmp').addEventListener('click',()=>showView('cmp'));
+if(PROFILES.length<2) document.getElementById('tab-cmp').hidden=true;
+if(PENDING.length){const el=document.getElementById('pending'); el.hidden=false; el.style.marginTop='8px';
+  el.innerHTML='<b>Coming soon:</b> '+PENDING.map(p=>'profile '+p.cycle+' ('+shortDate(p)+')').join(', ')+' is on its way: the float has sent only part of that dive so far. It will appear here automatically once the whole profile is in.';}
+
+pdOptions(document.getElementById('selP'),S.p);
+document.getElementById('selP').addEventListener('change',e=>{S.p=+e.target.value; renderOne();});
+document.getElementById('selA').addEventListener('change',e=>{S.a=e.target.value; if(S.b===S.a) S.b=''; syncSelects(); buildMain();});
+document.getElementById('selB').addEventListener('change',e=>{S.b=e.target.value; buildMain();});
+document.getElementById('feat').addEventListener('change',e=>{S.feat=e.target.checked; buildMain();});
+document.getElementById('ghost').addEventListener('change',e=>{S.ghost=e.target.checked; buildMain();});
+document.querySelectorAll('[data-range]').forEach(g=>g.querySelectorAll('button').forEach(btn=>btn.addEventListener('click',()=>{
+  setPressed(g,btn); if(g.dataset.range==='one'){S.d=+btn.dataset.d; buildMain();} else {C.d=+btn.dataset.d; buildCompare();}})));
+document.getElementById('selPA').addEventListener('change',e=>{C.a=+e.target.value; renderCompare();});
+document.getElementById('selPB').addEventListener('change',e=>{C.b=+e.target.value; renderCompare();});
+document.getElementById('selV').addEventListener('change',e=>{C.v=e.target.value; buildCompare();});
+document.querySelectorAll('#cmpMode button').forEach(btn=>btn.addEventListener('click',()=>{setPressed(document.getElementById('cmpMode'),btn); C.mode=btn.dataset.m; buildCompare();}));
+/*DARK-JS-START*/
+matchMedia('(prefers-color-scheme: dark)').addEventListener('change',renderAll);
+new MutationObserver(renderAll).observe(document.documentElement,{attributes:true,attributeFilter:['data-theme']});
+/*DARK-JS-END*/
+
+syncSelects();
+if(location.hash==='#compare'&&PROFILES.length>1) view='cmp';
+function start(){showView(view);}
+if(document.fonts&&document.fonts.ready){document.fonts.ready.then(start);} else start();
+</script>
+</body>
+</html>
