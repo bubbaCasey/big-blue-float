@@ -1,0 +1,81 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>About · Big Blue Float</title>
+  <link rel="stylesheet" href="css/style.css">
+  <script src="js/common.js"></script>
+</head>
+<body>
+  <header class="site">
+    <h1>Big Blue · Swampscott High School ocean float</h1>
+    <nav>
+      <a href="tracking.html">Tracking</a>
+      <a href="data.html">Data</a>
+      <a href="about.html">About</a>
+    </nav>
+  </header>
+
+  <main>
+    <div class="card">
+      <h2 style="margin-top:0">About the float</h2>
+      <p>
+        Big Blue is an ocean profiling float adopted by Swampscott High School through the
+        Adopt a Float program (GO-BGC project). It was launched in October 2026, named after
+        Swampscott High School, and is an autonomous float that drifts with ocean currents while
+        it measures temperature, salinity, oxygen, nitrate, chlorophyll, and pH with depth.
+      </p>
+      <p>
+        The float's data is used in AP Environmental Science, Meteorology, and marine science
+        classes. Students use this site to look at how the ocean's temperature and chemistry change
+        with depth and over time.
+      </p>
+    </div>
+
+    <div class="card">
+      <h2 style="margin-top:0">Float details</h2>
+      <table>
+        <tbody>
+          <tr><th>Program</th><td>GO-BGC, through Adopt a Float</td></tr>
+          <tr><th>Float</th><td>BGC UW 23357</td></tr>
+          <tr><th>WMO number</th><td>1902753</td></tr>
+          <tr><th>Deployed</th><td>1 October 2026, about 15:30 UTC, from Kaharoa II (Voyage 2605, Leg 2, Station 39)</td></tr>
+          <tr><th>Deployment position</th><td>17°24′S, 162°24′E (Coral Sea)</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="card">
+      <h2 style="margin-top:0">Where the data comes from</h2>
+      <p>
+        Profiles come from the MBARI float data file for WMO 1902753:
+        <a href="https://www3.mbari.org/lobo/Data/FloatVizData//1902753.txt">www3.mbari.org/lobo/Data/FloatVizData/1902753.txt</a>.
+        A script converts that file into <code>data/float.json</code>. The tracking and data
+        pages read that file, and it is refreshed automatically every 6 hours.
+      </p>
+      <p>
+        Quality flags follow MBARI's convention: 0 = good, 4 = questionable, 8 = bad, 1 = missing
+        or not inspected. Values flagged bad or not inspected are left out of this site. Values
+        marked questionable are shown, so students should treat them with some care. Missing
+        values are shown as gaps.
+      </p>
+      <p>
+        Positions for some profiles are interpolated when the float's own fix was missing. These
+        are marked with quality flag 4 in MBARI's file.
+      </p>
+    </div>
+
+    <div class="card">
+      <h2 style="margin-top:0">Acknowledgments</h2>
+      <p>
+        Thanks to MBARI and the GO-BGC project for the float data and the Adopt a Float program.
+      </p>
+    </div>
+  </main>
+
+  <footer>
+    Big Blue float · Swampscott High School, Swampscott, Massachusetts
+  </footer>
+</body>
+</html>

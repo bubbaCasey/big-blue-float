@@ -1,0 +1,160 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Data · Big Blue Float</title>
+  <link rel="stylesheet" href="css/style.css">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+  <script src="js/common.js"></script>
+</head>
+<body>
+  <header class="site">
+    <h1>Big Blue · Swampscott High School ocean float</h1>
+    <nav>
+      <a href="tracking.html">Tracking</a>
+      <a href="data.html">Data</a>
+      <a href="about.html">About</a>
+    </nav>
+  </header>
+
+  <main>
+    <div id="error" class="error"></div>
+
+    <div class="card">
+      <div class="controls">
+        <label>Variable
+          <select id="var"></select>
+        </label>
+        <button id="csv" type="button">Download selected data (CSV)</button>
+      </div>
+      <div>
+        <div class="muted" style="margin-bottom:0.3rem">Profiles to show (the newest is selected by default):</div>
+        <div class="checks" id="profiles"></div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="chart-wrap"><canvas id="chart"></canvas></div>
+      <p class="muted" style="margin-bottom:0">
+        Each line is one profile. Depth increases downward. Missing values are left out of the plot.
+        Data points flagged as questionable by MBARI are included.
+      </p>
+    </div>
+
+    <div class="card muted">
+      Data file last updated by MBARI: <span id="updated">–</span> (GMT). This page refreshes automatically every 6 hours.
+    </div>
+  </main>
+
+  <footer>
+    Float data: MBARI (GO-BGC project), WMO 1902753 · <a href="about.html">About this site</a>
+  </footer>
+
+  <script>
+    const LABELS = {
+      temperature: 'Temperature (°C)',
+      salinity: 'Salinity (PSS)',
+      oxygen: 'Oxygen (µmol/kg)',
+      nitrate: 'Nitrate (µmol/kg)',
+      chlorophyll: 'Chlorophyll-a (mg/m³)',
+      ph: 'pH (total scale)',
+      pressure: 'Pressure (dbar)',
+      depth: 'Depth (m)'
+    };
+    const PALETTE = ['#0b5c7a', '#c05621', '#2f855a', '#6b46c1', '#b7791f', '#2b6cb0', '#97266d'];
+
+    (async () => {
+      const $ = id => document.getElementById(id);
+      try {
+        const data = await loadFloatData();
+        const profs = data.profiles;
+        $('updated').textContent = data.source_file_updated || 'unknown';
+
+        // Variable menu, temperature first
+        const order = ['temperature', 'salinity', 'oxygen', 'nitrate', 'chlorophyll', 'ph', 'pressure'];
+        const vars = order.filter(v => data.variables.includes(v));
+        $('var').innerHTML = vars.map(v => `<option value="${v}">${LABELS[v]}</option>`).join('');
+
+        // Profile checkboxes; newest checked by default
+        $('profiles').innerHTML = profs.map((p, i) => `
+          <label><input type="checkbox" value="${i}" ${i === profs.length - 1 ? 'checked' : ''}>
+            Station ${p.station} · ${p.timestamp_utc.slice(0, 10)}</label>`).join('');
+
+        const chart = new Chart($('chart'), {
+          type: 'scatter',
+          data: { datasets: [] },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            animation: false,
+            plugins: { legend: { position: 'bottom' } },
+            scales: {
+              x: { title: { display: true, text: '' } },
+              y: { reverse: true, beginAtZero: true, title: { display: true, text: 'Depth (m)' } }
+            }
+          }
+        });
+
+        function selectedProfiles() {
+          return [...document.querySelectorAll('#profiles input:checked')]
+            .map(cb => profs[Number(cb.value)]);
+        }
+
+        function draw() {
+          const v = $('var').value;
+          const sel = selectedProfiles();
+          chart.options.scales.x.title.text = LABELS[v];
+          chart.data.datasets = sel.map((p, k) => {
+            const xs = p.levels[v] || [];
+            const ys = p.levels.depth || [];
+            const points = [];
+            for (let i = 0; i < Math.min(xs.length, ys.length); i++) {
+              if (xs[i] !== null && ys[i] !== null) points.push({ x: xs[i], y: ys[i] });
+            }
+            const color = PALETTE[k % PALETTE.length];
+            return {
+              label: `Station ${p.station} · ${p.timestamp_utc.slice(0, 10)}`,
+              data: points,
+              showLine: true,
+              borderColor: color,
+              backgroundColor: color,
+              pointRadius: 2,
+              borderWidth: 2,
+              tension: 0
+            };
+          });
+          chart.update();
+        }
+
+        $('var').addEventListener('change', draw);
+        document.querySelectorAll('#profiles input').forEach(cb => cb.addEventListener('change', draw));
+
+        $('csv').addEventListener('click', () => {
+          const keys = data.variables;
+          const lines = [['station', 'timestamp_utc', 'lat', 'lon', ...keys].join(',')];
+          selectedProfiles().forEach(p => {
+            const n = p.levels.depth ? p.levels.depth.length : 0;
+            for (let i = 0; i < n; i++) {
+              lines.push([
+                p.station, p.timestamp_utc, p.lat, p.lon,
+                ...keys.map(k => (p.levels[k] && p.levels[k][i] !== null) ? p.levels[k][i] : '')
+              ].join(','));
+            }
+          });
+          const blob = new Blob([lines.join('\n')], { type: 'text/csv' });
+          const a = document.createElement('a');
+          a.href = URL.createObjectURL(blob);
+          a.download = 'big-blue-float-selected.csv';
+          a.click();
+          URL.revokeObjectURL(a.href);
+        });
+
+        draw();
+      } catch (err) {
+        $('error').textContent = 'Sorry, the float data could not be loaded. ' + err.message;
+      }
+    })();
+  </script>
+</body>
+</html>

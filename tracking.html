@@ -1,0 +1,106 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Tracking · Big Blue Float</title>
+  <link rel="stylesheet" href="css/style.css">
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script src="js/common.js"></script>
+</head>
+<body>
+  <header class="site">
+    <h1>Big Blue · Swampscott High School ocean float</h1>
+    <nav>
+      <a href="tracking.html">Tracking</a>
+      <a href="data.html">Data</a>
+      <a href="about.html">About</a>
+    </nav>
+  </header>
+
+  <main>
+    <div id="error" class="error"></div>
+
+    <div class="card">
+      <div class="stats">
+        <div class="stat"><div class="label">Latest station</div><div class="value" id="s-station">–</div></div>
+        <div class="stat"><div class="label">Latest profile</div><div class="value" id="s-when">–</div></div>
+        <div class="stat"><div class="label">Position</div><div class="value" id="s-where">–</div></div>
+        <div class="stat"><div class="label">Profiles so far</div><div class="value" id="s-count">–</div></div>
+      </div>
+      <p class="muted" style="margin-bottom:0">
+        Data file last updated by MBARI: <span id="s-updated">–</span> (GMT).
+        This page refreshes automatically every 6 hours.
+      </p>
+    </div>
+
+    <h2>Track</h2>
+    <div id="map"></div>
+    <p class="muted">Blue dots are earlier profiles. The orange dot is the most recent. Click a dot for details.</p>
+
+    <h2>Profile positions</h2>
+    <div class="card">
+      <table>
+        <thead><tr><th>Station</th><th>Date and time (UTC)</th><th>Position</th><th>Levels</th></tr></thead>
+        <tbody id="rows"></tbody>
+      </table>
+    </div>
+  </main>
+
+  <footer>
+    Float data: MBARI (GO-BGC project), WMO 1902753 · <a href="about.html">About this site</a>
+  </footer>
+
+  <script>
+    (async () => {
+      const $ = id => document.getElementById(id);
+      try {
+        const data = await loadFloatData();
+        const profs = data.profiles;
+        const latest = profs[profs.length - 1];
+
+        $('s-station').textContent = latest.station;
+        $('s-when').textContent = fmtDate(latest.timestamp_utc);
+        $('s-where').textContent = fmtLatLon(latest.lat, latest.lon);
+        $('s-count').textContent = profs.length;
+        $('s-updated').textContent = data.source_file_updated || 'unknown';
+
+        // Map
+        const map = L.map('map');
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+          maxZoom: 8,
+          attribution: '&copy; OpenStreetMap contributors'
+        }).addTo(map);
+
+        const pts = profs.map(p => [p.lat, p.lon]);
+        L.polyline(pts, { color: '#0b5c7a', weight: 3 }).addTo(map);
+
+        profs.forEach((p, i) => {
+          const isLatest = i === profs.length - 1;
+          L.circleMarker([p.lat, p.lon], {
+            radius: isLatest ? 9 : 6,
+            color: isLatest ? '#c05621' : '#0b5c7a',
+            fillColor: isLatest ? '#c05621' : '#0b5c7a',
+            fillOpacity: 0.9
+          }).bindPopup(
+            `<b>Station ${p.station}</b><br>${fmtDate(p.timestamp_utc)}<br>${fmtLatLon(p.lat, p.lon)}`
+          ).addTo(map);
+        });
+        map.fitBounds(pts, { padding: [30, 30], maxZoom: 5 });
+
+        // Table, newest first
+        $('rows').innerHTML = profs.slice().reverse().map(p => `
+          <tr>
+            <td>${p.station}</td>
+            <td>${fmtDate(p.timestamp_utc)}</td>
+            <td>${fmtLatLon(p.lat, p.lon)}</td>
+            <td>${p.levels.depth ? p.levels.depth.length : 0}</td>
+          </tr>`).join('');
+      } catch (err) {
+        $('error').textContent = 'Sorry, the float data could not be loaded. ' + err.message;
+      }
+    })();
+  </script>
+</body>
+</html>

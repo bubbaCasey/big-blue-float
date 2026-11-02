@@ -1,24 +1,56 @@
-# Big Blue float pages
+# Big Blue float
 
-Live data pages for **Big Blue**, the GO-BGC profiling float (WMO 1902753) adopted by Swampscott High School through the Adopt a Float program.
+Public pages for Swampscott High School's adopted ocean float, Big Blue
+(WMO 1902753, BGC UW 23357, GO-BGC / Adopt a Float).
 
-- **Student page:** https://bubbacasey.github.io/big-blue-float/
-- **Google Sites embed (light theme):** https://bubbacasey.github.io/big-blue-float/embed.html
+| Page | File | What it shows |
+| --- | --- | --- |
+| Tracking | `tracking.html` | Map of the float's track and a table of profile positions |
+| Data | `data.html` | Interactive depth profiles for each variable, with CSV download |
+| About | `about.html` | Project background, float details, data source, and flag notes |
 
 ## How it updates
 
-Every morning a GitHub Action (`.github/workflows/update.yml`) downloads the float's data file from MBARI (https://www3.mbari.org/lobo/Data/FloatVizData/1902753.txt), runs `build.py`, and commits new pages to `docs/` only when a new dive has arrived. GitHub Pages serves `docs/`.
+1. `.github/workflows/update-data.yml` runs every 6 hours (and can be run by hand).
+2. It runs `scripts/update_data.py`, which downloads the MBARI data file for WMO 1902753
+   and writes `data/float.json`.
+3. If the data changed, the workflow commits and pushes the new file.
+4. The pages read `data/float.json` in the browser, so they always show the latest data
+   without any manual edits.
 
-To force an update: **Actions → Update Big Blue pages → Run workflow**.
+Nothing needs to be edited when new profiles arrive.
 
-## Files
+## One-time setup
 
-| File | What it is |
-|---|---|
-| `template.html` | The page design and charts. Edit this to change wording or layout. |
-| `build.py` | Downloads MBARI's file and fills the template (standard-library Python only). |
-| `docs/index.html` | Built page (follows light/dark setting). |
-| `docs/embed.html` | Built light-only copy for Google Sites. |
-| `docs/data.json` | Processed profiles. |
+```bash
+cd big-blue-float
+git init -b main
+git add .
+git commit -m "Initial site"
+git remote add origin https://github.com/<your-username>/big-blue-float.git
+git push -u origin main
+```
 
-Data: Argo (2000). Argo float data and metadata from Global Data Assembly Centre (Argo GDAC). SEANOE. https://doi.org/10.17882/42182
+Then, on GitHub:
+
+1. **Turn on GitHub Pages:** Settings → Pages → Build and deployment → Source: *Deploy from a branch*,
+   Branch: `main`, folder: `/ (root)`. The site will be at
+   `https://<your-username>.github.io/big-blue-float/tracking.html`.
+2. **Run the data job once:** Actions → *Update float data* → *Run workflow*.
+   After it finishes, `data/float.json` will contain the latest profiles.
+
+## Preview locally
+
+The pages load data with `fetch`, so open them through a local server rather than by double-clicking:
+
+```bash
+python3 -m http.server 8000
+# then visit http://localhost:8000/tracking.html
+```
+
+To refresh the data by hand on your computer: `python3 scripts/update_data.py`
+
+## Data source and credit
+
+Float data: MBARI, GO-BGC project. Source file:
+https://www3.mbari.org/lobo/Data/FloatVizData//1902753.txt
