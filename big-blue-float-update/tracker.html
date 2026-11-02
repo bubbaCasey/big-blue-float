@@ -1,0 +1,1021 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>BGC Argo Float 1902753 Tracker</title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.css">
+<style>
+  :root {
+    --ink: #12303b;
+    --accent: #1b6f8a;
+    --teal-dark: #14566d;
+    --pop: #f2a33a;
+    --sea: #e3eef1;
+    --paper: #e9f1f3;
+    --line: #c3d6da;
+    --muted: #4f6b75;
+    --current: #d62828;
+    --sans: "Avenir Next", "Segoe UI", system-ui, -apple-system, Helvetica, Arial, sans-serif;
+    --serif: Georgia, "Times New Roman", serif;
+    --r: 10px;
+  }
+  * { box-sizing: border-box; }
+  html, body { height: 100%; margin: 0; padding: 0; }
+  body {
+    font-family: var(--sans);
+    color: var(--ink);
+    background: var(--paper);
+    line-height: 1.4;
+    overflow: hidden;
+  }
+  .app {
+    height: 100%; min-height: 520px;
+    display: flex; flex-direction: column; gap: 8px; padding: 10px;
+  }
+
+  /* Title banner: navy block with the amber top stripe (same device as the active tab) */
+  .head {
+    display: flex; align-items: baseline; gap: 4px 14px; flex-wrap: wrap; flex: none;
+    background: var(--ink); color: #fff; border-radius: var(--r);
+    padding: 14px 16px 9px; box-shadow: inset 0 5px 0 var(--pop);
+  }
+  h1 { font-family: var(--serif); font-size: 1.35rem; margin: 0; font-weight: 700; letter-spacing: 0.01em; }
+  .sub { color: #b9d3da; margin: 0; font-size: 0.85rem; }
+
+  /* Stat cards */
+  .facts { display: grid; grid-template-columns: repeat(5, 1fr); gap: 8px; flex: none; }
+  .fact {
+    background: #fff; border: 1px solid var(--line); border-left: 5px solid var(--accent);
+    border-radius: 8px; padding: 7px 12px; min-width: 0;
+  }
+  .fact .k { font-size: 0.72rem; font-weight: 600; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .fact .v { font-size: 1.15rem; font-weight: 700; font-variant-numeric: tabular-nums; white-space: nowrap; }
+
+  /* Panels */
+  .main { flex: 1; min-height: 0; display: grid; grid-template-columns: minmax(0, 1.45fr) minmax(0, 1fr); gap: 8px; }
+  .panel {
+    background: #fff; border: 1px solid var(--line); border-radius: var(--r); overflow: hidden;
+    box-shadow: 0 1px 3px rgba(18, 48, 59, 0.08);
+    display: flex; flex-direction: column; min-height: 0; min-width: 0;
+  }
+  .panel-h {
+    display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap;
+    padding: 7px 12px; background: var(--sea); border-bottom: 2px solid var(--accent);
+    font-weight: 700; font-size: 0.92rem; color: var(--ink);
+  }
+  .legend { display: flex; gap: 14px; font-size: 0.75rem; color: var(--muted); font-weight: 500; }
+  .legend span::before {
+    content: ""; display: inline-block; width: 10px; height: 10px; border-radius: 50%;
+    margin-right: 5px; vertical-align: -1px;
+  }
+  .legend .cur::before { background: var(--current); }
+  .legend .prev::before { background: #8a949a; }
+  #map { flex: 1; min-height: 0; }
+
+  .side { display: flex; flex-direction: column; gap: 8px; min-height: 0; min-width: 0; }
+  .side .log { flex: 1; }
+  .drift-strip, .home-strip { flex: none; }
+  .home { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1px; background: var(--line); }
+  .home .dstat .u { margin-top: 1px; }
+  .home .tt { font-size: 0.85rem; font-weight: 600; color: var(--teal-dark); margin-top: 2px; }
+  .rt-toggle { font-size: 0.75rem; font-weight: 600; color: var(--muted); display: inline-flex; align-items: center; gap: 6px; cursor: pointer; }
+  .rt-key { display: inline-block; width: 22px; height: 0; border-top: 3px dashed; vertical-align: middle; margin-right: 6px; }
+  .drift { display: grid; grid-template-columns: repeat(4, 1fr); gap: 1px; background: var(--line); }
+  .dstat { background: #fff; padding: 6px 12px; min-width: 0; }
+  .dstat .k { font-size: 0.7rem; font-weight: 600; color: var(--muted); }
+  .dstat .v { font-size: 0.98rem; font-weight: 700; font-variant-numeric: tabular-nums; }
+  .dstat .u { font-size: 0.75rem; font-weight: 400; color: var(--muted); display: block; }
+  .arrow { display: inline-block; color: var(--accent); transition: transform 0.4s; margin-right: 4px; }
+  .dnote { font-size: 0.72rem; color: var(--muted); font-weight: 500; }
+
+  /* Buttons share the tab colours */
+  .zoomctl button {
+    display: block; width: 100%; font-family: var(--sans); font-size: 0.78rem; font-weight: 600; color: #fff;
+    background: var(--accent); border: 0; border-bottom: 1px solid rgba(255, 255, 255, 0.28);
+    padding: 7px 12px; cursor: pointer; text-align: left;
+  }
+  .zoomctl button:last-child { border-bottom: 0; }
+  .zoomctl button:hover { background: var(--teal-dark); }
+
+  /* Tables */
+  .scroll { flex: 1; min-height: 0; overflow: auto; }
+  .scroll-x { overflow-x: auto; }
+  table { width: 100%; border-collapse: collapse; font-size: 0.85rem; font-variant-numeric: tabular-nums; }
+  th, td { text-align: left; padding: 6px 8px; border-bottom: 1px solid #dbe8ea; white-space: nowrap; }
+  #mv-places td, #mv-places th { padding: 4px 8px; }
+  #mv-places td:first-child { font-size: 0.82rem; line-height: 1.2; }
+  th {
+    color: var(--ink); font-weight: 700; font-size: 0.78rem; background: #fff;
+    position: sticky; top: 0; z-index: 1; box-shadow: 0 2px 0 var(--line);
+  }
+  th button { border: 0; background: none; padding: 0; font: inherit; font-weight: 700; color: var(--ink); cursor: pointer; }
+  th button:hover { text-decoration: underline; }
+  tbody tr:hover td { background: #f1f8f9; }
+  tr.latest td { background: #fdecec; font-weight: 700; }
+
+  /* Footer */
+  .foot { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; font-size: 0.8rem; flex: none; }
+  #status { color: var(--muted); flex: 1; min-width: 200px; }
+  #status.err { color: #9a2f12; }
+  .foot a { color: var(--accent); font-weight: 600; text-decoration: none; margin-left: 14px; }
+  .foot a:hover { text-decoration: underline; }
+  button#refresh {
+    font-family: var(--sans); font-size: 0.8rem; font-weight: 600; color: #fff; background: var(--accent);
+    border: 0; border-radius: 8px; padding: 6px 14px; cursor: pointer;
+  }
+  button#refresh:hover { background: var(--teal-dark); }
+  a:focus-visible, button:focus-visible { outline: 3px solid var(--current); outline-offset: 2px; }
+
+  .hidden { display: none !important; }
+
+  /* Tabs */
+  .tabs {
+    display: flex; gap: 6px; flex: none; margin-bottom: -8px; position: relative; z-index: 1;
+    padding-top: 4px; border-bottom: 5px solid var(--ink);
+  }
+  .tabs button {
+    flex: 1 1 0; max-width: 270px; min-width: 0;
+    font-family: var(--sans);
+    font-size: 1rem; font-weight: 600; letter-spacing: 0.01em; line-height: 1.2;
+    padding: 12px 14px 11px; color: #fff; background: var(--accent);
+    border: 0; border-radius: 9px 9px 0 0; cursor: pointer;
+    box-shadow: inset 0 -3px 0 rgba(0, 0, 0, 0.18);
+    transition: background 0.15s;
+  }
+  .tabs button:hover { background: var(--teal-dark); }
+  .tabs button[aria-selected="true"] {
+    background: var(--ink); font-weight: 700; box-shadow: inset 0 5px 0 var(--pop);
+  }
+
+  /* Movement and time-at-depth views */
+  .move { flex: 1; min-height: 0; display: grid; grid-template-columns: 1.25fr 1fr; gap: 8px; }
+  .move .col { display: flex; flex-direction: column; gap: 8px; min-height: 0; min-width: 0; }
+  .pace, .dnote2 {
+    padding: 8px 12px; font-size: 0.82rem; color: var(--ink);
+    background: #fdf4e3; border-top: 1px solid #f1dcb0; border-left: 4px solid var(--pop);
+  }
+  .pace b, .dnote2 b { color: var(--ink); }
+  .speedbar { display: inline-block; height: 8px; background: #86b3c1; margin-right: 6px; border-radius: 2px; vertical-align: middle; }
+  tr.latest .speedbar { background: var(--current); }
+  .legend .avg::before { background: var(--accent); }
+  .rose { flex: 1; min-height: 0; display: flex; align-items: center; justify-content: center; padding: 4px; }
+  .rose svg { display: block; font-family: inherit; }
+  .dive { flex: 1; min-height: 0; display: grid; grid-template-columns: 1fr; grid-template-rows: auto auto auto; align-content: start; gap: 8px; overflow: auto; }
+  .dstats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
+  .dive .chart { flex: none; padding: 4px 8px; position: relative; }
+  .dive .chart svg { display: block; font-family: inherit; }
+  .legend .l-desc::before { background: #8a949a; }
+  .legend .l-park::before { background: #1b6f8a; }
+  .legend .l-asc::before { background: #d97706; }
+  .nodata { padding: 16px; color: var(--muted); font-size: 0.85rem; }
+  .places td:last-child { color: var(--muted); }
+  .places th { position: static; white-space: normal; }
+  .places td:first-child, #mv-legs td:first-child { white-space: normal; }
+  td small { font-size: 0.76rem; font-weight: 500; color: var(--muted); }
+  #mv-legs td { vertical-align: middle; }
+
+  @media (min-width: 761px) and (max-width: 1150px) {
+    .poslog th:nth-child(5), .poslog td:nth-child(5) { display: none; }
+  }
+
+  @media (max-width: 760px) {
+    body { overflow: auto; }
+    .tabs button { max-width: none; font-size: 0.92rem; padding: 11px 6px 10px; }
+    .head { padding-top: 13px; }
+    .fact .k { white-space: normal; }
+    .fact .v { white-space: normal; font-size: 1.05rem; }
+    .facts { grid-template-columns: repeat(2, 1fr); }
+    .drift { grid-template-columns: repeat(2, 1fr); }
+    .home { grid-template-columns: 1fr; }
+    .app { min-height: 900px; }
+    .main { grid-template-columns: 1fr; grid-template-rows: 1.3fr 1fr; }
+    .move { grid-template-columns: 1fr; }
+    .dstats { grid-template-columns: repeat(2, 1fr); }
+  }
+</style>
+</head>
+<body>
+<div class="app">
+  <div class="head">
+    <h1>BGC Argo Float 1902753</h1>
+    <p class="sub">UW 23357 &middot; Deployed from Kaharoa II, Voyage 2605 Leg 2, Station 39, Coral Sea</p>
+  </div>
+
+  <div class="facts" aria-live="polite">
+    <div class="fact"><div class="k">Days since deployment</div><div class="v" id="f-days">-</div></div>
+    <div class="fact"><div class="k">Days since last data update</div><div class="v" id="f-update">-</div></div>
+    <div class="fact"><div class="k">Latest position</div><div class="v" id="f-pos">-</div></div>
+    <div class="fact"><div class="k">Drift from deployment</div><div class="v" id="f-drift">-</div></div>
+    <div class="fact"><div class="k">Profiles received</div><div class="v" id="f-count">-</div></div>
+  </div>
+
+  <section class="panel home-strip" aria-label="Distance from Swampscott High School">
+    <div class="panel-h"><span>Distance from Swampscott High School</span>
+      <label class="rt-toggle"><input type="checkbox" id="rt-show"> Show ocean routes on map</label></div>
+    <div class="home">
+      <div class="dstat"><div class="k">Straight line (great circle)</div><div class="v" id="h-gc">-</div><div class="tt" id="h-gc-t"></div><span class="u">Shortest path over the globe, crossing land</span></div>
+      <div class="dstat"><div class="k"><span class="rt-key" style="color:#7b3fa0"></span>Shortest all-water path</div><div class="v" id="h-arc">-</div><div class="tt" id="h-arc-t"></div><span class="u">Via Bering Strait and the Northwest Passage. Sea ice blocks it most of the year.</span></div>
+      <div class="dstat"><div class="k"><span class="rt-key" style="color:#d97706"></span>Shortest ice-free water path</div><div class="v" id="h-ice">-</div><div class="tt" id="h-ice-t"></div><span class="u">Via the Drake Passage around South America, staying out of polar sea ice</span></div>
+    </div>
+  </section>
+
+  <section class="panel drift-strip" aria-label="Drift rate">
+    <div class="panel-h"><span>Drift rate</span><span class="dnote" id="d-note"></span></div>
+    <div class="drift">
+      <div class="dstat"><div class="k">Average speed</div><div class="v" id="d-avg">-</div></div>
+      <div class="dstat"><div class="k">Net direction</div><div class="v"><span class="arrow" id="d-arrow">&#10148;</span><span id="d-dir">-</span></div></div>
+      <div class="dstat"><div class="k">Latest leg</div><div class="v" id="d-last">-</div></div>
+      <div class="dstat"><div class="k">Distance travelled</div><div class="v" id="d-dist">-</div></div>
+    </div>
+  </section>
+
+  <div class="tabs" role="tablist">
+    <button type="button" role="tab" id="tab-map" aria-selected="true">Map &amp; position log</button>
+    <button type="button" role="tab" id="tab-move" aria-selected="false">Movement</button>
+    <button type="button" role="tab" id="tab-dive" aria-selected="false">Time at depth</button>
+  </div>
+
+  <div class="main" id="view-map">
+    <section class="panel" aria-label="Map">
+      <div class="panel-h">
+        <span>Float track</span>
+        <span class="legend"><span class="cur">Current position</span><span class="prev">Previous positions</span></span>
+      </div>
+      <div id="map" role="img" aria-label="Map of the float's current position and track"></div>
+    </section>
+
+    <section class="panel log" aria-label="Position log">
+      <div class="panel-h"><span>Position log</span></div>
+      <div class="scroll">
+        <table class="poslog">
+          <thead>
+            <tr>
+              <th>Cycle</th>
+              <th aria-sort="descending" id="date-th"><button type="button" id="sort-btn">Date (UTC) &#9660;</button></th>
+              <th>Latitude</th>
+              <th>Longitude</th>
+              <th>Source</th>
+            </tr>
+          </thead>
+          <tbody id="log"></tbody>
+        </table>
+      </div>
+    </section>
+  </div>
+
+  <div class="move hidden" id="view-move">
+    <section class="panel" aria-label="Leg by leg">
+      <div class="panel-h"><span>Leg by leg</span><span class="dnote">Measured between surfacing positions</span></div>
+      <div class="scroll">
+        <table>
+          <thead><tr><th>Leg</th><th>Days</th><th>Distance</th><th>Speed</th><th>Heading</th></tr></thead>
+          <tbody id="mv-legs"></tbody>
+        </table>
+      </div>
+      <div class="pace" id="mv-pace"></div>
+    </section>
+    <div class="col">
+      <section class="panel" style="flex: 1" aria-label="Drift compass">
+        <div class="panel-h">
+          <span>Drift compass</span>
+          <span class="legend"><span class="cur">Latest leg</span><span class="prev">Earlier legs</span><span class="avg">Overall average</span></span>
+        </div>
+        <div class="rose" id="mv-rose"></div>
+      </section>
+      <section class="panel" style="flex: none" aria-label="Distance to places">
+        <div class="panel-h"><span>From the float to&hellip;</span><span class="dnote">straight line, at the latest drift speed</span></div>
+        <div class="scroll-x"><table class="places"><thead><tr><th>Place</th><th>Distance</th><th>Direction</th><th>Time to float there</th></tr></thead><tbody id="mv-places"></tbody></table></div>
+      </section>
+    </div>
+  </div>
+
+  <div class="dive hidden" id="view-dive">
+    <div class="dstats" aria-live="polite">
+      <div class="fact"><div class="k">Parked at depth (latest cycle)</div><div class="v" id="dv-park">-</div></div>
+      <div class="fact"><div class="k">Share of cycle at depth</div><div class="v" id="dv-share">-</div></div>
+      <div class="fact"><div class="k">Time at the surface per cycle</div><div class="v" id="dv-surf">-</div></div>
+      <div class="fact"><div class="k">Next surfacing (estimate)</div><div class="v" id="dv-next">-</div></div>
+    </div>
+    <section class="panel" aria-label="Depth over time">
+      <div class="panel-h">
+        <span>Depth over time</span>
+        <span class="legend"><span class="l-desc">Descending</span><span class="l-park">Parked, drifting</span><span class="l-asc">Rising and measuring</span></span>
+      </div>
+      <div class="chart" id="dv-chart"></div>
+    </section>
+    <div class="dnote2" id="dv-note"></div>
+  </div>
+
+  <div class="foot">
+    <div id="status">Loading...</div>
+    <div>
+      <button type="button" id="refresh">Refresh now</button>
+      <a href="https://www.ocean-ops.org/board" target="_blank" rel="noopener">OceanOPS</a>
+      <a href="https://www3.mbari.org/gobgc/gobgcviz-float-viewer/index.html" target="_blank" rel="noopener">GO-BGC viewer</a>
+    </div>
+  </div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+<script>
+/* =========================================================
+   EDIT THIS SECTION
+   ========================================================= */
+const CONFIG = {
+  wmo: "1902753",
+
+  // Deployment: 17°24'S 162°24'E, 1530 UTC, 1 Oct 2026
+  deployment: { time: "2026-10-01T15:30:00Z", lat: -17.4, lon: 162.4 },
+
+  // How often the page re-checks for new profiles while it is open (minutes).
+  refreshMinutes: 30,
+
+  // BACKUP ONLY. The page fetches new profiles by itself; these entries are shown if the fetch fails,
+  // and are replaced by the fetched version of the same cycle as soon as it loads.
+  // You never need to add to this list while the automatic update is working.
+  manualPositions: [
+    // Cycle 1, from GO-BGC data file dated 10/02/2026 (times are GMT)
+    { cycle: 1, time: "2026-10-02T12:27:00Z", lat: -17.428, lon: 162.308 },
+    // Cycle 2, from Argo GDAC profile file (AOML DAC), 12 Oct 2026
+    { cycle: 2, time: "2026-10-12T18:21:00Z", lat: -17.532, lon: 162.210 },
+    // Cycle 3, from Argovis, 23 Oct 2026
+    { cycle: 3, time: "2026-10-23T00:59:06Z", lat: -17.5008, lon: 162.0253 },
+    // Cycle 4, from GO-BGC data file dated 11/02/2026 (Argovis not yet updated)
+    { cycle: 4, time: "2026-11-02T07:18:00Z", lat: -17.407, lon: 161.410 }
+  ]
+};
+/* ========================================================= */
+
+
+
+/* =========================================================
+   DIVE-CYCLE TIMING (from the float's Argo trajectory file, 1902753_Rtraj.nc)
+   dst = descent start, det = descent end (reaches parking depth), pet = parking end,
+   ast = ascent start (from ~1500 dbar), aet = reaches the surface.
+   park = pressure (dbar) every hour while parked.
+   Cycles newer than the last one listed here are estimated automatically from their surfacing times.
+   ========================================================= */
+const DEPLOY_SURFACE_HOURS = 7.5;   // time at the surface after deployment, before the first dive
+const MAX_PROFILE_DBAR = 1499;
+const DIVES = {
+  "1": {"dst":"2026-10-01T23:03:30Z","det":"2026-10-02T03:03:30Z","pet":"2026-10-02T03:09:47Z","ast":"2026-10-02T07:08:29Z","aet":"2026-10-02T12:27:09Z","pdet":797,"ppet":798,"parkStart":"2026-10-02T03:03:39Z","park":[797],"surfEnd":"2026-10-02T12:58:07Z","surfEndMin":false},
+  "2": {"dst":"2026-10-02T12:58:07Z","det":"2026-10-02T16:58:07Z","pet":"2026-10-12T08:59:14Z","ast":"2026-10-12T12:58:06Z","aet":"2026-10-12T18:21:26Z","pdet":810,"ppet":1010,"parkStart":"2026-10-02T16:58:17Z","park":[810,816,818,836,833,839,849,850,858,852,850,854,863,875,876,889,894,887,903,908,906,911,914,911,929,935,935,943,947,948,960,959,948,963,969,967,986,987,984,1005,1003,1006,1003,999,1003,998,996,1001,995,994,1002,1004,1001,1003,997,1003,997,995,995,1000,1002,996,1002,1006,1005,1005,1002,1000,1000,1002,998,1002,1010,1000,1007,1015,1007,1004,1004,1001,1005,998,998,1008,1000,1003,1001,996,1004,1003,1004,1000,1004,1001,998,1003,1010,1003,1003,1004,1006,1004,1006,1003,997,1002,1003,1005,1010,1010,1003,1009,1004,1007,1001,1004,1004,996,1001,1004,1000,1007,1003,1001,994,998,997,1004,1005,1007,1007,1004,1006,1004,1008,1007,999,999,1006,999,1006,1003,1005,1004,1005,1007,1010,1004,1002,1002,995,1007,994,1004,1005,1009,1003,1007,1009,1002,1007,997,1000,1001,1001,999,1002,1013,1008,1006,1015,1010,1004,999,998,1004,1007,1002,1006,1014,1009,1006,1003,1005,1002,1004,1001,999,1000,1001,1006,1007,1005,1011,1010,1008,1001,1005,994,1003,1009,1007,1004,1006,1010,1008,1003,1011,1007,1013,1007,998,1001,1006,1004,1005,997,1010,1009,1004,1007,1007,999,1008,1005,1005,1007,1005,1007,1010,1014,1014],"surfEnd":"2026-10-12T19:28:43Z","surfEndMin":false},
+  "3": {"dst":"2026-10-12T19:28:43Z","det":"2026-10-12T23:28:43Z","pet":"2026-10-22T15:29:50Z","ast":"2026-10-22T19:28:42Z","aet":"2026-10-23T00:59:06Z","pdet":976,"ppet":984,"parkStart":"2026-10-12T23:28:53Z","park":[976,986,989,1003,1000,1008,1004,1013,1014,1013,1008,1000,1008,1005,999,1003,996,1001,1004,1000,1010,1007,1010,1002,1004,1002,995,1003,1006,1004,1011,1005,1015,1004,1004,1008,1008,1011,1011,994,1002,1007,1001,1004,1008,1006,999,1008,1012,1006,1009,1005,999,1004,1004,1007,1003,1004,1011,1003,1007,1009,1013,1007,1001,1009,1007,1008,1006,1007,1009,1018,1016,1018,1002,999,999,1002,992,987,986,995,993,993,987,994,992,993,995,992,994,989,987,994,994,996,999,1004,1000,1001,1000,999,996,992,996,999,997,997,997,1002,996,999,998,989,996,987,996,998,998,1002,998,998,994,996,998,1000,994,989,1000,993,993,990,999,1000,995,995,990,995,997,993,992,1003,997,1002,998,1002,1000,997,995,999,996,1004,1006,1004,1004,999,1004,1011,1011,1010,998,994,998,1003,994,1003,997,999,998,996,999,994,995,986,1003,989,996,993,995,997,994,1001,1008,1003,1005,995,991,990,1011,998,1004,1007,1002,1011,1004,1002,1001,1006,995,999,994,1005,1001,998,987,993,993,998,998,986,996,995,994,1007,1001,996,1000,1001,994,1002,988,1000,1002,998,1006,1001,1004,1009,992,996,998,998],"surfEnd":"2026-10-23T01:19:40Z","surfEndMin":true}
+};
+
+/* Data source: Argovis (CU Boulder). It allows requests from web pages, needs no key, and re-syncs with the
+   Argo data centres daily, so a new profile usually appears here within about a day of the float surfacing. */
+const SOURCES = [
+  { name: "Argovis", run: fetchArgovis }
+];
+
+const $ = id => document.getElementById(id);
+const fmtLat = v => Math.abs(v).toFixed(2) + "\u00B0" + (v < 0 ? "S" : "N");
+const fmtLon = v => { const w = ((v + 540) % 360) - 180; return Math.abs(w).toFixed(2) + "\u00B0" + (w < 0 ? "W" : "E"); };
+const fmtTime = iso => new Date(iso).toISOString().slice(0, 16).replace("T", " ");
+
+function haversineKm(a, b) {
+  const R = 6371, rad = d => d * Math.PI / 180;
+  const dLat = rad(b.lat - a.lat), dLon = rad(b.lon - a.lon);
+  const h = Math.sin(dLat / 2) ** 2 +
+            Math.cos(rad(a.lat)) * Math.cos(rad(b.lat)) * Math.sin(dLon / 2) ** 2;
+  return 2 * R * Math.asin(Math.sqrt(h));
+}
+
+function setStatus(msg, isErr) {
+  const s = $("status");
+  s.textContent = msg;
+  s.className = isErr ? "err" : "";
+}
+
+/* ---------- Map setup (created once) ---------- */
+const map = L.map("map", { worldCopyJump: true, zoomSnap: 0.25 });
+const esriBase = L.tileLayer(
+  "https://server.arcgisonline.com/ArcGIS/rest/services/Ocean/World_Ocean_Base/MapServer/tile/{z}/{y}/{x}",
+  { maxNativeZoom: 10, maxZoom: 10, attribution: "Tiles &copy; Esri, GEBCO, NOAA, National Geographic, and others" }
+).addTo(map);
+const esriLabels = L.tileLayer(
+  "https://server.arcgisonline.com/ArcGIS/rest/services/Ocean/World_Ocean_Reference/MapServer/tile/{z}/{y}/{x}",
+  { maxNativeZoom: 10, maxZoom: 10 }
+).addTo(map);
+let fellBack = false;
+esriBase.on("tileerror", () => {
+  if (fellBack) return;
+  fellBack = true;
+  map.removeLayer(esriBase);
+  map.removeLayer(esriLabels);
+  L.tileLayer("https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}.png", {
+    subdomains: "abcd", maxZoom: 12,
+    attribution: "&copy; OpenStreetMap contributors &copy; CARTO"
+  }).addTo(map);
+});
+// Initial view: the whole Pacific basin, centered on the float.
+let didInitialFit = false;
+let userTouched = false;
+function setPacificView(c) {
+  const bounds = L.latLngBounds([c.lat - 60, c.lon - 128], [c.lat + 60, c.lon + 128]);
+  map.setView([c.lat, c.lon], map.getBoundsZoom(bounds), { animate: false });
+}
+setPacificView(CONFIG.deployment);
+["pointerdown", "wheel", "touchstart"].forEach(ev =>
+  map.getContainer().addEventListener(ev, () => { userTouched = true; }, { passive: true }));
+
+/* "Zoom to float" and "Pacific view" buttons on the map */
+function latestPoint() {
+  return allPoints.length ? allPoints[allPoints.length - 1] : CONFIG.deployment;
+}
+function zoomToFloat() {
+  const latest = latestPoint();
+  const b = L.latLngBounds(allPoints.map(p => [p.lat, p.lon]));
+  const tiny = !allPoints.length || (b.getNorth() - b.getSouth() < 0.3 && b.getEast() - b.getWest() < 0.3);
+  if (tiny) map.setView([latest.lat, latest.lon], 8);
+  else map.fitBounds(b.pad(0.4), { maxZoom: 8 });
+}
+const MapButtons = L.Control.extend({
+  options: { position: "topright" },
+  onAdd: function () {
+    const div = L.DomUtil.create("div", "leaflet-bar zoomctl");
+    const mk = (label, fn) => {
+      const b = L.DomUtil.create("button", "", div);
+      b.type = "button"; b.textContent = label;
+      L.DomEvent.on(b, "click", e => { L.DomEvent.stop(e); fn(); });
+    };
+    mk("Zoom to float", zoomToFloat);
+    mk("Pacific view", () => setPacificView(latestPoint()));
+    L.DomEvent.disableClickPropagation(div);
+    return div;
+  }
+});
+map.addControl(new MapButtons());
+const overlay = L.layerGroup().addTo(map);
+
+/* ---------- State ---------- */
+let allPoints = [];     // sorted oldest -> newest
+let sortDesc = true;    // table order: newest first by default
+let lastCount = 0;
+let sourceNote = "";
+
+/* ---------- Drawing ---------- */
+function drawMap() {
+  overlay.clearLayers();
+  const latlngs = allPoints.map(p => [p.lat, p.lon]);
+
+  if (latlngs.length > 1) {
+    L.polyline(latlngs, { color: "#c4cacd", weight: 1.5, opacity: 0.95 }).addTo(overlay);
+  }
+
+  allPoints.slice(0, -1).forEach(p => {
+    L.circleMarker([p.lat, p.lon], {
+      radius: 5, color: "#6f7a80", weight: 1, fillColor: "#8a949a", fillOpacity: 1
+    }).addTo(overlay).bindPopup(
+      "<b>" + (p.source === "Deployment" ? "Deployment" : "Cycle " + (p.cycle ?? "?")) + "</b><br>" +
+      fmtTime(p.time) + " UTC<br>" + fmtLat(p.lat) + ", " + fmtLon(p.lon));
+  });
+
+  const latest = allPoints[allPoints.length - 1];
+  L.circleMarker([latest.lat, latest.lon], {
+    radius: 9, color: "#ffffff", weight: 2, fillColor: "#d62828", fillOpacity: 1
+  }).addTo(overlay).bindPopup(
+    "<b>" + (allPoints.length > 1 ? "Current position" : "Deployment (current position)") + "</b><br>" +
+    fmtTime(latest.time) + " UTC<br>" + fmtLat(latest.lat) + ", " + fmtLon(latest.lon));
+
+  // Start on the whole Pacific centered on the float; later, only re-center if the float leaves the view.
+  if (!didInitialFit) {
+    if (!userTouched) setPacificView(latest);
+    didInitialFit = true;
+  } else if (!map.getBounds().contains([latest.lat, latest.lon])) {
+    map.panTo([latest.lat, latest.lon]);
+  }
+}
+
+function drawFacts() {
+  const dep = CONFIG.deployment;
+  const latest = allPoints[allPoints.length - 1];
+  $("f-days").textContent = Math.max(0, Math.floor((Date.now() - new Date(dep.time)) / 86400000));
+  if (allPoints.length > 1) {
+    const d = (Date.now() - new Date(latest.time)) / 86400000;
+    $("f-update").textContent = d < 1 ? "<1" : Math.floor(d);
+  } else {
+    $("f-update").textContent = "No data yet";
+  }
+  $("f-pos").textContent = fmtLat(latest.lat) + " " + fmtLon(latest.lon);
+  $("f-drift").textContent = kmMi(haversineKm(dep, latest));
+  $("f-count").textContent = Math.max(0, allPoints.length - 1);
+}
+
+function drawTable() {
+  const rows = allPoints.map((p, i) => ({ p, latest: i === allPoints.length - 1 }));
+  if (sortDesc) rows.reverse();
+  const tbody = $("log");
+  tbody.innerHTML = "";
+  rows.forEach(({ p, latest }) => {
+    const tr = document.createElement("tr");
+    if (latest) tr.className = "latest";
+    const cells = [
+      p.source === "Deployment" ? "Deploy" : (p.cycle ?? "-"),
+      fmtTime(p.time), fmtLat(p.lat), fmtLon(p.lon), p.source
+    ];
+    cells.forEach(txt => {
+      const td = document.createElement("td");
+      td.textContent = txt;
+      tr.appendChild(td);
+    });
+    tbody.appendChild(tr);
+  });
+  $("sort-btn").innerHTML = "Date (UTC) " + (sortDesc ? "&#9660;" : "&#9650;");
+  $("date-th").setAttribute("aria-sort", sortDesc ? "descending" : "ascending");
+  $("sort-btn").title = sortDesc ? "Newest first. Click for oldest first." : "Oldest first. Click for newest first.";
+}
+
+
+function bearingDeg(a, b) {
+  const rad = d => d * Math.PI / 180;
+  const dLon = rad(((b.lon - a.lon + 540) % 360) - 180);
+  const y = Math.sin(dLon) * Math.cos(rad(b.lat));
+  const x = Math.cos(rad(a.lat)) * Math.sin(rad(b.lat)) -
+            Math.sin(rad(a.lat)) * Math.cos(rad(b.lat)) * Math.cos(dLon);
+  return (Math.atan2(y, x) * 180 / Math.PI + 360) % 360;
+}
+function compass(deg) {
+  const n = ["N","NNE","NE","ENE","E","ESE","SE","SSE","S","SSW","SW","WSW","W","WNW","NW","NNW"];
+  return n[Math.round(deg / 22.5) % 16];
+}
+function speedText(km, days) {
+  const kmd = km / days, cms = kmd * 100000 / 86400;
+  return kmd.toFixed(1) + " km/day (" + (kmd * MI).toFixed(1) + " mi/day), " + cms.toFixed(1) + " cm/s";
+}
+const kmMi = (km, nd) => { nd = nd || 0; const f = v => nd ? v.toFixed(nd) : Math.round(v).toLocaleString(); return f(km) + " km (" + f(km * MI) + " mi)"; };
+const mFt = m => Math.round(m).toLocaleString() + " m (" + (Math.round(m * 3.28084 / 10) * 10).toLocaleString() + " ft)";
+
+function drawDrift() {
+  const pts = allPoints;
+  const ids = ["d-avg", "d-dir", "d-last", "d-dist"];
+  if (pts.length < 2) {
+    ids.forEach(i => $(i).textContent = "-");
+    $("d-arrow").style.visibility = "hidden";
+    $("d-note").textContent = "Drift rates appear once the float has reported its first profile.";
+    return;
+  }
+  const first = pts[0], last = pts[pts.length - 1];
+  const DAY = 86400000;
+  let path = 0;
+  for (let i = 1; i < pts.length; i++) path += haversineKm(pts[i - 1], pts[i]);
+  const elapsed = (new Date(last.time) - new Date(first.time)) / DAY;
+
+  $("d-avg").textContent = elapsed > 0 ? speedText(path, elapsed) : "-";
+  $("d-dist").textContent = kmMi(path, 1);
+
+  const netBrg = bearingDeg(first, last);
+  $("d-arrow").style.visibility = "visible";
+  $("d-arrow").style.transform = "rotate(" + (netBrg - 90) + "deg)";
+  $("d-dir").textContent = compass(netBrg) + " (" + Math.round(netBrg) + "\u00B0)";
+
+  const prev = pts[pts.length - 2];
+  const legDays = (new Date(last.time) - new Date(prev.time)) / DAY;
+  $("d-last").textContent = legDays > 0
+    ? speedText(haversineKm(prev, last), legDays) + " toward " + compass(bearingDeg(prev, last))
+    : "-";
+
+  $("d-note").textContent = pts.length < 4
+    ? "Early values are rough: they include the float's first descent and only a few positions."
+    : "Between surfacings the float drifts at depth most of the time, so these speeds mostly reflect the deep current.";
+}
+
+/* ---------- Distance from Swampscott High School ----------
+   Ocean distances were precomputed with a shortest-path search over a 0.25-degree land/water grid
+   (global-land-mask), starting from the water off Swampscott. OCEAN.full / OCEAN.icefree hold the
+   distance (km) on a 1-degree grid around the float's area; the page adds the last short hop from the float. */
+const SHS = { lat: 42.4796, lon: -70.9065 };
+const OCEAN = {"full":"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VFKDUrFS31INUztTaVOXU8VT8lMgVE5UfFRhVAtUtlNgUwpTtVJfUglStFFeUQlRs1BdUBFQ0E+aT3lPYU9JTzFPGk8DT+xO1k7ATqtOlU6ATmpOVU5BTixOGU4FTvJN303NTbtNqU2YTZBN////////V003TStNG00OTQFN9kzsTOBM10zSTMhMwEy5TLVMr0yzTLlMvkzGTM5M2EyyTHhMPUwCTMZLiktOSxBL00qVSlZKsFLhUhBTPlNsU5pTyFP1UyNUUVR/VK1UwFRpVBNUvVNnUxBTulJkUg5St1FhUf//tVBeUP//kU9ETw1P9U7eTsZOrk6XToBOak5UTj5OKU4TTv5N6U3TTb9Nq02YTYRNcU1fTU1NO00pTSFNMk3////////ITLxMrEyeTJJMhkx9THFMaExjTFlMUUxJTEZMQExETEpMT0xXTF9MaUxzTIBMi0xTTBdM2kudS19LIUvjSqRKDVM+U25TnVPLU/lTJ1RVVINUsVTfVA1V4lSMVDZU4FOJUzNT3VKHUv//////////////////////////ik5yTlpOQk4rThRO/U3nTdFNvE2mTZFNfE1mTVJNPk0qTRdNA03xTN5MzEy6TLJMw0z//3dMakxZTE1MPEwvTCNMF0wOTAJM+Ev0S+pL4UvaS9dL0UvVS9tL4EvoS/BL+ksETBFMHEwpTDpMK0ztS69LcEsyS/NKZVObU8xT/FMrVFpUh1S1VONUEVU/VV5VB1WxVFtUBFSuU1hTEFPYUv//////////////////////////Hk4GTu5N102/TahNkU16TWRNT006TSRNDk35TORM0Ey8TKlMlUyCTHBMXUxLTENM//8YTAhM/EvqS95LzUvAS7RLqEueS5JLiUuES3tLcktrS2hLYktmS2xLcUt5S4FLi0uVS6JLrUu6S8tL3UvoS/lLwEuBS0JLo1PuUypUW1SLVLpU6FQWVURVclWgVYRVLlXYVIFUK1ToU///////////////////////////////////vk2aTYJNa01TTTxNJU0OTfdM4kzNTLdMoUyMTHdMYkxOTDpMJ0wUTAFM70vcS9RL//+pS5hLjUt7S29LXktRS0VLOUsvSyNLGksVSwxLA0v8SvhK80r3Sv1KAUsJSxJLG0smSzNLPktLS1xLb0t4S4lLm0utS5NL4lMtVHhUuVTrVBtVSlV4VaVV01UBVq1VV1UAVbdUd1QvVPlT4lP///////////////////////////////8uTRZN/kzmTM9MuEyhTIpMdExfTEpMNEweTAlM9EvgS8xLuEulS5JLgEttS1tLSks6SylLHksLSwBL70riStVKykrASrRKq0qmSp1KlEqNSolKg0qHSo1KkkqaSqJKrEq3SsRKz0rcSu1KAEsJSxpLLEs+S1FL//////////9KVXtVq1XZVQdWNVYuVtdVjVVHVQdV/////2lU///////////////////////////////////OTKpMkkx6TGJMS0w0TB1MB0zxS9xLxkuxS5xLhktyS15LSks2SyNLEUv+SuxK20rKSrpKsEqcSpFKgEpzSmZKW0pRSkVKPEo3Si5KJUodShpKFEoYSh5KI0orSjNKPUpISlVKX0ptSn5KkkqaSqtKvUrPSuJK/////////////9tVDFY7VmhWllZlVh5W2FWYVf///////////////////////////////////////////////z1MJUwNTPZL3kvHS7BLmUuDS25LWUtDSy5LGEsDS+9K20rISrRKoUqPSn1KbEpbSktKQUotSiJKEEoDSvdJ60niSdZJzEnISb5JtUmuSatJpUmpSa9JtEm8ScRJzknYSeZJ8En+SQ9KI0orSjxKTkpgSnNK//////////////////////////+vVmpW////////////////////////////////////////////////////////uUuhS4lLcUtaS0NLLEsWSwBL60rVSr9KqkqVSoBKbEpZSkVKMkogSg5K/UnsSdxJ0km+SbNJoUmUSYhJfElzSWZJXUlYSU9JRkk/STxJNkk6SUBJRUlNSVVJX0lpSXZJgUmOSaBJtUm8Sc1J3knxSQRK////////////////////////////////////////////////////////////////////////////////////////TEs0SxxLBEvsStVKvkqoSpJKfEpnSlFKPEonShJK/UnqSdZJw0mxSZ9Jjkl9SWxJY0lPSURJMkklSRlJDUkESfdI7kjpSOBI10jQSMxIx0jLSNFI1UjdSOZI70j6SAdJEkkfSTJJRklNSV1Jb0mCSZVJ////////////////////////////////////////////////////////////////////////////////////////3krGSq9Kl0p/SmhKUUo6SiRKDkr5SeNJzUm4SaNJjkl7SWdJVElBSTBJHkkOSf1I9UjgSNRIw0i2SKlInkiVSIhIf0h6SHFIaEhhSF1IV0hcSGFIZkhuSHZIgEiLSJhIo0iwSMNI2EjdSO5IAEkSSSZJ//////////////////////////////////////////////////////////////////////////////////////////9ZSkFKKUoRSvpJ40nMSbVJn0mKSXVJX0lJSTRJH0kMSfhI5UjSSMBIr0ieSI5IhkhxSGVIVEhHSDpIL0gmSBlIEEgLSAJI+UfxR+5H6EfsR/JH90f/RwdIEUgcSClIM0hBSFRIaUhuSH9IkUijSLZI////////////////////////////////////////////////////////////////////////////////////////BErsSdRJvEmkSYxJdUleSUdJMUkbSQZJ8EjaSMVIsEidSIhIdUhjSFFIQEgvSB9IF0gCSPZH5EfXR8tHv0e3R6pHoEecR5NHiUeCR39HeUd9R4NHiEeQR5hHokesR7pHxEfSR+VH+0f/RxBIIkg0SEdI////////////////////////////////////////////////////////////////////////////////////////lkl+SWZJTkk2SR5JB0nwSNlIwkisSJhIgkhrSFdIQUguSBlIBkj0R+JH0UfAR7BHqEeTR4dHdUdoR1xHUEdIRzpHMUcsRyRHGkcTRxBHCkcORxRHGUchRylHM0c9R0tHVUdiR3ZHjEeQR6FHskfFR9hH////////////////////////////////////////////////////////////////////////////////////////KUkQSfhI4EjISLBImEiBSGpIU0g9SDJIE0j9R+hH0ke/R6pHl0eFR3NHYkdRR0BHOkckRxhHBkf5Ru1G4UbYRstGwka9RrVGq0akRqBGm0afRqVGqUaxRrpGw0bORtxG5kbzRgdHHUchRzFHQ0dWR2lH/////////////////////////////////////////////////////////////////////////////////////9NIu0iiSIpIckhaSEJIKkgTSPxH5UfOR8NHpEeOR3lHY0dQRztHKEcVRwRH8kbiRtFGy0a0RqlGl0aKRn1GckZpRlxGU0ZORkZGPEY1RjFGK0YwRjVGOkZCRkpGVEZfRm1Gd0aERphGrkaxRsJG1EbmRvpG//////////////////////////////////////////////////////////////////////////////////9+SGZITUg0SBxIBEjsR9RHvEekR41HdkdfR1RHQkcfRwpH9EbgRsxGuUamRpRGg0ZyRmJGXEZFRjpGKEYbRg5GA0b6Re1F5EXfRddFzUXFRcJFvEXARcZFy0XTRdtF5UXwRf5FB0YVRilGP0ZCRlNGZUZ3RopG//////////////////////////////////////////////////////////////////////////////////8QSPhH30fGR65HlUd9R2VHTkc2Rx5HB0fwRuVGAEewRptGhUZxRlxGSUY3RiVGFEYDRvNF7UXWRctFuEWrRZ9Fk0WLRX5FdEVwRWdFXUVWRVNFTUVRRVdFXEVkRWxFdkWARY9FmEWmRbpF0EXTReRF9kUIRhtG////////////////////////////////////////////////////////////////////////////////vEeiR4lHcUdYRz9HJ0cPR/dG30bHRq9GmEaBRnZGqUY+RixGFUYCRu1F2kXIRbZFpUWURYRFfUVnRVxFSUU8RTBFJEUcRQ5FBUUARfhE7kTnRORE3kTiROhE7UT1RP1EB0URRR9FKUU2RUtFYUVkRXVFhkWZRaxF/////////////////////////////////////////////////////////////////////////////2dHTkc0RxtHAkfqRtFGuEagRohGcEZYRkBGKUYSRv//5UXPRbtFpkWTRX5Fa0VZRUdFNkUlRRRFDkX4ROxE2kTNRMFEtUStRJ9ElkSRRIlEf0R4RHREb0RzRHlEfUSFRI5El0SiRLBEukTHRNxE8kT1RAVFF0UqRT1FvUr///////////////////////////////////////////////////////////////////////8TR/lG4EbGRq1GlEZ7RmJGSkYxRhlGAUbpRdFFukWjRYxFdkVgRUxFN0X//w9F/ETpRNhExkS2RKVEn0SJRH1Ea0ReRFFERkQ+RDBEJ0QiRBpEEEQJRAVE/0MERAlEDkQWRB9EKEQzREFES0RYRG1Eg0SFRJZEqES6RM5EYUokSv///////////////////////////////////////////////////////////////9lGv0alRotGckZYRj9GJUYNRvRF20XDRapFkkV6RWJFS0UzRR1FB0XxRN1EyESzRKBEjUR6RGhEV0RGRDZEMEQaRA5E/EPvQ+JD10PPQ8FDuEOzQ6tDoUOZQ5ZDkEOUQ5pDn0OnQ69DuUPEQ9JD20PpQ/5DFEQWRCdEOURLRF9E80nISf///////////////////////////////////////////////4dJ/////////////3hGUUY3Rh1GA0bqRdBFt0WeRYVFbEVURTtFI0ULRfNE20TERK5El0SCRG1E//9ERDBEHUQLRPlD6EPXQ8dDt0P//59DjEN/Q3NDZ0NfQ1JDSENEQzxDMUMqQydDIUMlQytDMEM4Q0BDSkNUQ2NDbEN6Q45DpUOnQ7hDykPcQ+9DhElrSS5J9Ej/////////////////////////////////////xkj//ytJ/////////////xxG40XIRa9FlUV7RWJFSEUvRRZF/UTlRMxEtEScRIREbERVRD5EKEQSRP5D6UPVQ8FDrkOcQ4pDeUNoQ1hDSEM5Q///HUMQQwRD+ELwQuJC2ULUQs1CwkK7QrhCskK2QrxCwULJQtFC20LlQvNC/UIKQx9DNUM4Q0lDWkNtQ4BDI0n8SNJIlEhsSP///////////////////////////////z5IV0iRSNBIuUj///////8ARsBFgkVaRUBFJkUNRfNE2kTARKdEjkR2RF1ERUQtRBVE/UPmQ89DuUOjQ45DekNmQ1JDP0MtQxtDCkP5QuhC2ULKQrxCrkKhQpVCiUL//3NCakJlQl5CU0JMQklCQ0JHQk1CUUJZQmJCa0J2QoRCjkKbQrBCxkLJQtpC60L+QhFD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+EJAQ/1C//8XQuJBsUH//1NBJkH5QMxAoUB2QE1AJED9P9Y/sT+MP2g/RT8jPwM/4z7EPqU+iD5sPlE+Nz4cPgI+6D3OPbU9mz2CPWo9UT05PSE9Cj3zPNw8xjywPJs8hjxyPF88TDw5PCg8FjwGPPU75jvXO8g7uzuuO6I7ljuLO4A7dztuO2Y7YDtZO1U7UDtUO1o7XjtmO287eDuDO5E7mzuoO7070zvVO+Y7+DsLPB48fEJdQiVC40GuQX5BTUEdQf//wECTQGZAOkAPQOU/vD+UP20/Rz8iP/4+2j64Ppc+dj5XPjg+Gj7+PeI9xz2tPZM9eT1fPUY9LD0TPfo84jzKPLI8mzyDPG08VzxBPCw8FzwDPPA73TvKO7g7pzuXO4Y7djtoO1k7TDs/OzI7JzsbOxE7CDv/Ovc68TrqOuY64DrkOuo67zr3Ov86CTsUOyI7LDs5O047ZDtmO3c7iTubO687IELuQc9Bh0FKQf//6UC5QP//W0AtQABA1D+oP34/VD8sPwQ/3j64PpM+cD5NPis+Cj7qPcs9rT2QPXQ9WD0+PSQ9Cj3wPNY8vTykPIs8czxbPEM8KzwUPP475zvSO707qDuUO4E7bjtbO0k7ODsnOxc7Bzv4Ouo63TrQOsM6uDqsOqI6mTqQOog6gjp6Onc6cTp1Ons6gDqIOpA6mjqkOrM6vDrKOt869Tr3Ogg7GjssOz87xUGEQWVBMkHqQLZAhUBVQCVA9j/IP5o/bj9CPxc/7T7EPpw+dT5OPik+BT7iPb89nj19PV49Pz0iPQU96TzPPLU8mzyBPGc8Tjw1PBw8BDzsO9Q7vDulO447eDtjO007OTslOxE7/jrsOto6yTq4Oqg6mDqJOns6bTpgOlQ6SDo9OjM6KTogOhg6EjoLOgg6AjoGOgw6EToZOiE6Kzo1OkM6TTpaOm86hjqIOpk6qzq9OtA6Z0EoQfVA20CVQFJAIUDxP8A/kT9iPzU/CD/bPrA+hT5cPjM+DD7lPb89mz13PVQ9Mj0RPfE80zy0PJc8ezxgPEU8KzwSPPg73zvGO607lTt8O2U7TTs2Ox87CTvzOt46yjq2OqI6jzp9Oms6WjpJOjk6KToaOgw6/jnxOeU52TnOOcM5ujmxOak5ozmcOZk5kzmXOZ05ojmqObI5vDnGOdQ53jnrOQA6FjoZOio6OzpOOmE6C0HMQItAbEBcQP//vT+NP1w/LD/9Ps8+oj51Pkk+Hj70Pcs9oz18PVY9MT0NPek8xzylPIU8ZjxHPCk8DTzxO9Y7vDuiO4k7bztWOz47JTsNO/U63jrHOrA6mjqEOm86WjpGOjM6IDoOOvw56jnaOck5ujmrOZ05jzmCOXY5ajlfOVQ5SzlCOTo5NDktOSk5JDkoOS45Mjk6OUM5TDlXOWU5bzl8OZE5pzmqObo5zDnfOfI5tkBvQC9A/T//////WT8pP/g+yD6YPmo+PD4PPuM9tz2NPWM9Oz0TPe08xzyiPH88XDw6PBk8+TvaO7w7nzuDO2c7TTszOxo7ADvnOs86tjqeOoY6bzpYOkE6KzoVOgA66znXOcQ5sTmeOY05ezlrOVo5Sjk8OS05IDkTOQY5+zjvOOU43DjTOMs4xTi+OLo4tDi4OL44wzjLONM43TjoOPY4ADkNOSI5ODk6OUs5XTlvOYM5R0AZQP//kz/////////FPpQ+ZD40PgU+1z2qPX09UT0mPfw80zyrPIQ8Xjw4PBQ88TvPO607jTttO087MTsUO/k63jrEOqo6kTp4Ol86RzovOhc6/znoOdI5uzmmOZE5fDloOVU5QjkvOR05DDn7OOs42zjMOL44sTikOJc4jDiAOHY4bThkOFw4VjhOOEs4RThJOE84VDhcOGQ4bjh5OIc4kDieOLM4yTjLONw47jgAORM52D++P30/////////kj5hPjA+AD7QPaA9cj1EPRc96zy/PJU8azxDPBs89TvPO6o7hjtkO0I7ITsBO+I6xDqnOoo6bzpVOjs6IjoJOvA52DnAOag5kDl5OWI5TDk3OSE5DTn5OOU40jjAOK44nTiMOHw4bDhdOE84QTg0OCg4HDgROAc4/Tf0N+035jffN9w31jfaN+A35TftN/U3/zcJOBg4ITgvOEM4WjhcOG04fziROKQ4dz9PP08/2j6hPmI+Lj79Pc09nD1sPTw9DT3fPLE8hTxZPC48BDzbO7M7jDtmO0A7HDv5OtY6tTqVOnU6Vzo5Ohw6ATrmOcw5szmaOYE5aTlQOTk5ITkKOfM43TjHOLI4njiKOHY4YzhROD84LjgdOA04/TfuN+A30jfFN7k3rTeiN5c3jjeFN303dzdwN203ZzdrN3E3djd+N4Y3kDeaN6g3sje/N9Q36jftN/43DzgiODU4","full_route":[[-17.38,161.38],[-15.88,161.38],[-14.38,161.38],[-12.88,161.38],[-11.38,161.38],[-9.62,161.62],[-8.12,161.62],[-6.62,161.62],[-5.12,161.62],[-3.62,161.62],[-2.12,161.62],[-0.62,161.62],[0.88,161.62],[2.38,161.62],[3.88,161.62],[5.38,161.62],[6.88,161.62],[8.38,161.62],[9.88,161.62],[11.38,161.62],[12.88,161.62],[14.38,161.62],[15.88,161.62],[17.38,161.62],[18.88,161.62],[21.62,162.88],[24.62,164.38],[27.62,165.88],[30.62,167.38],[33.62,168.88],[36.62,170.38],[39.62,171.88],[42.62,173.38],[45.62,174.88],[48.62,176.38],[51.62,177.88],[54.62,179.38],[56.88,180.88],[58.38,182.38],[59.88,183.88],[61.38,185.38],[62.88,186.88],[64.38,188.38],[65.88,189.88],[67.38,191.62],[68.88,193.62],[70.38,196.62],[71.88,199.62],[73.38,202.62],[74.62,205.38],[74.62,206.88],[74.62,208.38],[74.62,209.88],[74.62,211.38],[74.62,212.88],[74.62,214.38],[74.62,215.88],[74.62,217.38],[74.62,218.88],[74.62,220.38],[74.62,221.88],[74.62,223.38],[74.62,224.88],[74.62,226.38],[74.62,227.88],[74.62,229.38],[74.62,230.88],[74.62,232.38],[74.62,233.88],[74.62,235.38],[74.62,236.88],[74.62,238.38],[74.62,239.88],[74.62,241.38],[74.62,242.88],[74.62,244.38],[74.38,246.12],[74.38,247.62],[74.38,249.12],[74.38,250.62],[74.38,252.12],[74.38,253.62],[74.38,255.12],[74.38,256.62],[74.38,258.12],[74.38,259.62],[74.38,261.12],[74.38,262.62],[74.38,264.12],[74.38,265.62],[74.38,267.12],[74.38,268.62],[74.38,270.12],[74.38,271.62],[74.38,273.12],[74.38,274.62],[74.38,276.12],[74.38,277.62],[74.38,279.12],[74.38,280.62],[74.38,282.12],[74.38,283.62],[73.62,285.88],[72.12,288.88],[70.62,291.88],[69.12,294.88],[67.62,297.38],[65.12,298.88],[62.12,300.38],[59.12,301.88],[56.12,303.38],[53.62,304.38],[51.88,304.12],[50.38,302.38],[48.12,300.88],[45.62,299.62],[44.62,297.12],[43.38,294.38],[43.38,292.88],[43.38,291.38],[42.62,289.62]],"icefree":"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clKqUuJSGlNSU4lTwVP5UzFUaVSgVNhUEFVIVYBVuFXvVSdWX1aXVs9WBlc+V3ZXrlfmVyFYEVjVV55XZlcuV/ZWvlaGVk9WF1bfVadVcFVBVRhV8lTRVMJUs1SGVDFU3FOIUzNT31KfUmlS////////g1FLURNR21CkUGxQNFD8T8RPjU9VTx1P5U6tTnZOPk4GTs5Nlk1eTSVN7EyyTHhMPUwCTMZLiktOSxBL00qVSlZKx1L/UjdTb1OnU95TFlROVIZUvlT1VC1VZVWdVdVVDFZEVnxWtFbsViNXW1eTV///A1g7WP//YlgqWPJXu1eDV0tXE1fbVqRWbFY0Vv1VzVWkVXxVWFVAVTFV/lSqVFVUAFSsU2tTLFP2UsxS01L///////+gUWhRMFH5UMFQiVBRUBlQ4k+qT3JPOk8CT8tOk05bTiNO602yTXlNP00FTcpMj0xTTBdM2kudS19LIUvjSqRKHVNVU41TxFP8UzRUbFSkVNtUE1VLVYNVu1XzVSpWYlaaVtJWCldBV///////////////////////////EFjYV6FXaVcxV/lWwVaLVlpWL1YHVuFVwFWvVXlVJFXPVHtUOVT5U7pTg1NYUztTO1P//7ZSXlL2Ub5RhlFOURZR31CnUG9QN1D/T8hPkE9YTyBP6E6xTnhOQE4GTs1Nkk1YTRxN4UylTGhMK0ztS69LcEsyS/NKZVOrU+NTG1RTVIpUwlT6VDJValWhVdlVEVZJVoFWuVbwVihXYFeYV///////////////////////////Z1gvWPdXv1eHV1BXGVfoVrxWk1ZsVkdWL1b1VaFVTFUJVcdUh1RIVBFU5VO7U6pT//8fU8dShFJMUhRS3FGlUW1RNVH9UMVQjlBWUB5Q5k+uT3dPP08GT85OlE5bTiFO5k2rTW9NM032TLlMe0w9TP9LwEuBS0JLo1PuUzhUclSqVOJUGVVRVYlVwVX5VTBWaFagVthWEFdHV///////////////////////////////////vliGWE5YFljfV6hXdldKVx9X91bRVq9WdFYgVttVmFVWVRZV11SgVHNUSFQqVBpU//9WUxNT21KjUmtSNFL8UcRRjFFUUR1R5VCtUHVQPVAGUM5PlU9dTyNP6k6vTnVOOk7+TcJNhU1ITQpNzEyOTE9MEEzRS5NL4lMtVHhUw1QCVTlVcVWpVeFVGVZQVohWwFb4VjBXZ1efV9dXE1j////////////////////////////////eWKZYblg3WAVY2FesV4NXXFc3V/VWr1ZrVihW5lWmVWZVL1UBVdVUq1SWVCpU5lOiU2tTM1P7UsNSi1JUUhxS5FGsUXRRPVEFUc1QlVBdUCVQ7E+zT3lPP08ET8lOjk5RThVO102aTVxNHU3fTKBMYUwiTONL//////////9PVZJVylUCVjlWcVapVuFWGVdQV4hX/////zBY//////////////////////////////////82Wf9YyFiVWGZYOlgQWOdXwVeFV0BX+1a4VnZWNlb3Vb9VkFVjVThVAVW7VHZUM1T7U8NTi1NUUxxT5FKsUnRSPVIFUs1RlVFdUSZR7lC1UH1QQ1AKUM9PlU9aTx5P4k6lTmhOKk7sTa5Nb00wTfFMs0x0TDVM/////////////+BVI1ZbVpNWylYCVzpXcleqV////////////////////////////////////////////////1lZJln2WMlYnVh0WE1YFljRV4xXSVcHV8dWiFZQViBW8lXGVZJVTFUHVcRUjFRUVBxU5VOtU3VTPVMFU85SllJeUiZS7lG3UX9RRlEOUdRQm1BhUCZQ60+vT3NPNk/5TrtOfU4/TgBOwU2CTURNBU3GTIdM//////////////////////////9cV5RX////////////////////////////////////////////////////////hllYWStZAVnZWKhYYlgeWNtXmVdZVxlX4VawVoFWVFYkVt1VmVVWVR5V5lSuVHZUP1QHVM9Tl1NfUydT8FK4UoBSSFIQUthRn1FmUSxR8lC4UHxQQVAEUMhPi09NTw9P0E6STlNOFE7VTZdNWE0ZTdpM////////////////////////////////////////////////////////////////////////////////////////6Fm6WY9ZZVk6WfVYsFhtWCxY61esV3RXQlcSV+RWt1ZwVitW6FWwVXhVQVUJVdFUmVRhVClU8lO6U4JTSlMSU9tSo1JrUjJS+VG/UYVRSlEPUdNQl1BaUB1Q30+hT2NPJE/lTqZOaE4pTupNq01tTS5N////////////////////////////////////////////////////////////////////////////////////////SlodWvNZy1mIWUNZAFm/WH5YP1gGWNNXo1dzV0ZXA1e+VntWQ1YLVtRVnFVkVSxV9FS9VIVUTVQVVN1TpVNuUzZT/lLFUoxSUlIYUt1RolFmUSpR7VCwUHJQNFD2T7dPeE86T/tOvE59Tj5OAE7BTYJN//////////////////////////////////////////////////////////////////////////////////////////+BWlhaG1rXWZRZUlkSWdJYmlhmWDRYBFjWV5ZXUlcPV9dWn1ZnVi9W+FXAVYhVUFUYVeFUqVRxVDlUAVTJU5FTWFMfU+VSq1JxUjVS+lG9UYFRRFEGUchQiVBLUAxQzU+OT1BPEU/STpNOVE4WTtdN////////////////////////////////////////////////////////////////////////////////////////EFvmWrBaa1ooWuZZpllnWS5Z+VjGWJVYZlgrWOZXo1drVzNX+1bEVoxWVFYcVuRVrVV1VT1VBVXNVJZUXlQlVO1Ts1N6U0BTBVPKUo5SUlIVUthRmlFcUR5R31CgUGFQI1DkT6VPZk8oT+lOqk5rTixO////////////////////////////////////////////////////////////////////////////////////////dFtFWwBbvVp7Wjta/FnCWY1ZWVknWfdYwFh7WDhYAFjIV5BXWFchV+lWsVZ5VkFWClbSVZpVYlUqVfNUulSCVEhUD1TUU5pTXlMjU+dSqlJtUi9S8VGyUXRRNVH2ULdQeVA6UPtPvE9+Tz9PAE/BToJO////////////////////////////////////////////////////////////////////////////////////////2VuWW1NbEVvQWpFaWFohWu1ZulmJWVVZEFnNWJVYXlgmWO5Xtld+V0dXD1fXVp9WZ1YvVvhVwFWIVVBVF1XeVKRUalQvVPRTuFN8Uz9TAlPEUoZSSFIJUspRjFFNUQ5Rz1CRUFJQE1DUT5VPV08YT9lO/////////////////////////////////////////////////////////////////////////////////////3ZcLFzpW6dbZlsnW+1atlqBWk1aG1rrWaZZY1krWfNYvFiEWExYFFjcV6VXbVc1V/1WxVaOVlZWHlbmVa1VdFU6VQBVxVSKVE5UElTVU5hTWlMcU95Sn1JgUiJS41GkUWVRJ1HoUKlQalArUO1Prk9vTzBP//////////////////////////////////////////////////////////////////////////////////8MXcJcf1w9XP1bvluEW0xbFlvhWq5afVo9WvpZwVmKWVJZGlniWKpYc1g7WANYy1eTV1xXJFfsVrRWfFZEVgpW0VWWVVxVIFXlVKlUbFQvVPFTs1N0UzZT91K4UnlSO1L8Ub1RflFAUQFRwlCDUERQBlDHT4hP//////////////////////////////////////////////////////////////////////////////////9ZXRZd1FyUXFVcGlziW6tbdltCWxBb1FqRWlhaIFroWbBZeFlBWQlZ0ViZWGFYKljyV7pXgldKVxNX2lahVmhWLVbzVbdVfFVAVQNVxlSIVEpUC1TNU45TT1MRU9JSk1JUUhVS11GYUVlRGlHcUJ1QXlAfUOBP////////////////////////////////////////////////////////////////////////////////8V2uXWxdK13sXLFceVxBXAtc1lujW2tbKFvvWrZaf1pHWg9a11mfWWdZMFn4WMBYiFhQWBlY4VepV3FXOFf/VsVWilZPVhNW11WbVV1VIFXhVKNUZFQmVOdTqFNpUytT7FKtUm5SL1LxUbJRc1E0UfZQt1B4UDlQ/////////////////////////////////////////////////////////////////////////////4leRl4EXsNdhF1JXQ9d11ygXGtcN1wDXMBbhltNW///31qmWm5aNlr+WcZZjllXWR9Z51ivWHdYQFgIWNBXl1ddVyJX51arVm9WM1b1VbhVeVU7Vf1UvlR/VEBUAVTDU4RTRVMGU8dSiVJKUgtSzFGOUU9REFHRUJJQzVf///////////////////////////////////////////////////////////////////////8jX95enF5cXh1e4V2nXW5dNl0AXcxcmVxZXB5c5FusW3hbPVsEW81alVr//yVa7Vm2WX5ZRlkOWdZYn1hnWC5Y9Ve7V4BXRFcIV8tWjlZQVhJW1FWVVVZVF1XZVJpUW1QcVN5Tn1NgUyFT4lKkUmVSJlLnUalRalErUexQ6ldSWP///////////////////////////////////////////////////////////////wtgvF93XzVf9V62XnleP14FXs1dll1hXS1d8ly2XHxcQ1wPXNVbm1tkWyxb9Fq8WoRaTFoVWt1ZpVltWTVZ/ljFWIxYU1gYWN1XoVdkVydX6VarVm1WLlbvVbBVclUzVfRUtVR3VDhU+VO6U3tTPVP+Ur9SgFJCUgNSxFGFUUZRKliBWP///////////////////////////////////////////////8hi/////////////1ZgEWDPX45fT18SX9denV5kXi1e9l3CXYtdT10UXdpcolxuXDNc+1vDW4tb//8bW+RarFp0WjxaBFrMWZVZeVn//+tYsVh2WDpY/VfAV4NXRFcGV8dWiVZKVgtWzFWOVU9VEFXRVJJUVFQVVNZTl1NYUxpT21KcUl1SH1LgUaFRaljCWBpZkln/////////////////////////////////////A2L//2xi/////////////6pgaWAoYOlfrF9wXzVf/F7EXoxeV14jXuhdrV1yXTldBV3LXJJcWlwiXOpbslt7W0NbC1vTWptaZFosWvRZxVmDWf//DlnTWJdYWlgcWN5XoFdhVyJX5FalVmZWJ1bpVapVa1UsVe1Ur1RwVDFU8lO0U3VTNlP3UrhSelI7UvxRqVgCWVpZs1kLWv///////////////////////////////3thlGHSYR1idGL///////9FYQNhwmCDYEVgCWDNX5NfW18jX+1euF6CXkZeC17RXZldZF0pXfFcuVyCXEtcElzaW6JbalszW/taw1qLWl9aG1riWadZbFkxWfRYt1j//zpY+1e9V35XP1cAV8JWg1ZEVgVWxlWIVUlVClXLVIxUTlQPVNBTkVNTUxRT1VKWUldS6FhBWZtZ9FlMWv///////zdcmFz///////////////8MYQxhOGGCYdphMmL///////+dYV1hHmHgYKJgZmAsYPJful+DX05fGl/fXqNeaV4wXvxdwl2JXVFdGV3pXKpccVw6XAJcyluSW1pbI1vrWrVaelpBWgVaylmOWVFZE1nVWJZYV1gYWNpXm1dcVx1X3lagVmFWIlbjVaVVZlUnVehUqVRrVCxU7VOuU3BTMVPyUrNSJlmAWdpZNFqNWuZaP1umWxJcflz///////////////+dYJ1g52BAYaJhDmL/////OGL4YblhemE8YQBhxWCKYFJgGmDkX69feV89XwJfyF6QXlteIF7oXbBdeV1CXQpd0VyZXGJcKlzyW7pbgltQWxJb2VqeWmNaKFrrWa5Zb1kxWfJYs1j//zZY91e4V3lXO1f8Vr1WflY/VgFWwlWDVURVBlXHVIhUSVQKVMxTjVNOUw9TZFm/WRladFrOWidbgVvaWzJcmVz//////////////////0xgr2AbYYhh9GH/////k2JUYhVi12GaYV5hI2HqYLJgemBFYBFg1l+bX2BfJ1/zXrlegF5IXhBe3V2hXWldMV35XMFciVxSXBpc4lutW3FbOFv9WsFahVpIWgpazFmNWU5ZEFnRWJJYU1gUWNZXl1dYVxlX21acVl1WHlbfVaFVYlUjVeRUplRnVChU6VOqU2xToVn9WVhas1oOW2hbwlscXHVczlz//5Jd+l3//+FeTl+7XyhglWACYW9h3GH//+5i72KwYnJiNGL3YbxhgmFJYRJh22CnYHBgNGD5X79fh19TXxhf4F6oXnBeOl4BXsldkV1ZXSFd6VyyXHpcR1wKXNBblltbWx9b41qlWmdaKFrqWatZbFktWe5YsFhxWDJY81e0V3ZXN1f4VrlWe1Y8Vv1VvlV/VUFVAlXDVIRURlQHVMhT4Fk7WpZa//9NW6hbAlxdXLdcEF1qXcJdJV6MXu9eXF/JXzZgo2AQYX1h6mFXYsRiMWMNY85ikWJVYhti//+pYXJhPWEJYc5gkmBYYB9g61+xX3dfQF8IX9VemV5hXile8V25XYFdSV0SXdpcpFxoXDBc9Fu5W31bQFsCW8NahVpGWgdayFmKWUtZDFnNWI9YUFgRWNJXk1dVVxZX11aYVllWG1bcVZ1VXlUgVeFUolRjVCRUZFp7WtVaMVv//+dbQlydXPhcUl2sXQZeXl64Xhtfgl/kX1FgvmArYZhhBWJyYt9iTGNpYyxj////////QmIJYtNhnmFoYSxh8WC3YH9gS2D/////oF9oXzFf+V7AXoleUV4ZXuFdqV1yXT9dAV3IXI5cU1wXXNpbnVtfWyBb4VqjWmRaJVrmWadZaVkqWetYrFhuWC9Y8FexV3JXNFf1VrZWd1Y4VvpVu1V8VT1V/1TAVIFU////////cVvLW//////dXDhdk13uXUheol76XlRfrV8RYHhg2mBHYbRh/////xVjaWPGY4lj//8sY9piomJqYjViAWLGYYphUGEXYeNgqmBwYDhgAGDNX5FfWV8gX+lesV55XkFeCV7SXZxdYF0oXexcsVx1XDhc+lu7W31bPlv/WsBaglpDWgRaxVmGWUhZCVnKWItYTVgOWM9XkFdRVxNX1FaVVlZWGFbZVZpVW1UcVd5UploGW3RbulsNXG5czFz//3pd1F0vXv//5V4+X5df8F9KYKRg//////////////////////////92YzpjAWPLYpdiYGIkYulhr2F4Yf//C2HRYJhgYGApYPFfuF+BX0lfEV/ZXqFeal43XvpdwF2GXUtdD13SXJVcV1wYXNlbm1tcWx1b3lqfWmFaIlrjWaRZZlknWehYqVhqWCxY7VeuV29XMVfyVrNWdFY1VvdVuFV5VTpV51pDW51b/VtXXKpcBF1fXb5dF15xXsteK1+BX///NGCNYOdgQWH////////////////////////SY5pjYmMtY/livmKCYv//E2LbYaJhaWEwYfhgxWCJYFFgGWDhX6lfcV85XwJfyl6UXlleIF7kXaldbV0wXfJctFx1XDZc91u5W3pbO1v8Wr1af1pAWgFawlmEWUVZBlnHWIhYSlgLWMxXjVdOVxBX0VaSVlNWFVbWVZdVIVuBW99bOlyVXPNcR12hXfxdVl6zXg1faF/CXx5gfWDQYCph////////////////////////b2T//////////1ljHGPhYqticmI8YgNiyWGQYVhhImHpYLFgeWBBYAlg0l+aX2JfMF/yXrhefl5DXgdey12NXU9dEF3SXJNcVFwVXNdbmFtZWxpb21qdWl5aH1rgWaJZY1kkWeVYplhoWClY6lerV21XLlfvVrBWcVYzVvRV//++Wxlce1zXXDJdjV3kXT5emV7zXk5fql8FYF9gumD//////////////////////////wxly2SdZK9kxGRqZLZje2NIYwtj02KaYmFiKGLwYb1hgWFKYRFh2WChYGpgMmD6X8JfjV9RXxhf3V6hXmVeKF7qXaxdbV0vXfBcsVxyXDNc9Vu2W3dbOFv5WrtafFo9Wv5ZwFmBWUJZA1nEWIZYR1gIWMlXi1dMVw1XzlaPVlFW/////x9d5lwZXXRd//8qXoFe217//5Bf61//////////////////////////////wGWpZWdlK2UMZRllxGRaZP//22OjY2pjNGP7YsFiiGJRYhpi4mGpYXFhOmECYcpgkmBaYChg6l+xX3ZfO18AX8Nehl5HXgleyl2LXU1dDl3PXJBcUVwTXNRblVtWWxhb2VqaWltaHFreWZ9ZYFkhWeNYpFhlWCZY51epV2pXK1fsVq5W/////3RdVV10XbZdEV52XsdeJF9/X99fM2D//0FhlmH/////////////WWTIZDdlpmUEZsNllWV7ZVJl//+wZHRkQGQEZMxjk2NaYyFj6WK2YnpiQmIKYtJhmmFiYSph82C7YIVgSmARYNVfml9eXyFf416kXmZeJ17oXapda10sXe1crlxwXDFc8luzW3RbNlv3WrhaeVo7WvxZvVl+WT9ZAVnCWINYRFgGWMdXiFdJVwpX/////95d0V3eXRFeWV7//wlfZF/IXxxg/////0FhlmEGYnVi8WJgY89jPmSuZB1ljGX7ZSRmBWbqZZRlTGUQZdNknGRjZC1k9GO6Y4FjSWMTY9piomJqYjJi+mHDYYthU2EhYeNgqmBvYDRg+F+8X35fQF8CX8NehF5FXgZeyF2JXUpdC13NXI5cT1wQXNFbk1tUWxVb1lqXWllaGlrbWZxZXlkfWeBYoVhiWCRY5VemV2dX1Fw+Xa5dKl5OXm1erl7//0tfpl8BYF1g//9aYbFh2mE6Yo9i/mJtY9xjTGS7ZCplmWUIZndmdGYyZullqWVtZTll/GTEZItkUmQZZOFjrmNzYztjAmPKYpNiW2IjYuths2F+YUJhCWHOYJNgVmAZYNxfnV9eXyBf4V6iXmNeJV7mXaddaF0pXetcrFxtXC5c8FuxW3JbM1v0WrZad1o4WvlZull8WT1Z/li/WIFYQlgDWMRXAl1QXbtd//+ZXtdeCl///5pf6F9EYKVg+mBVYcRhNGJ3YsxiLGOIY/djZmTVZERls2UjZpJmz2aHZkVmCGbMZZRlW2UlZe1ks2R6ZEJkC2TTY5pjY2MrY/Niu2KDYkxiGWLcYaJhaGEtYfFgtGB3YDlg+l+7X31fPl//XsBegV5DXgRexV2GXUhdCV3KXItcTFwOXM9bkFtRWxNb1FqVWlZaF1rZWZpZW1kcWd5Yn1hgWCFYV13NXTdepl4VXzFfZV+nX///N2CGYOFgPGGXYfJhTmK9YhRjaWPFYyVkgGTvZF9lzmU9ZqxmG2fiZqJmZWYxZvVlvWWEZUtlEmXaZKdka2Q0ZPtjw2OLY1NjHGPkYqxid2I7YgJix2GLYU9hEmHUYJZgV2AYYNpfm19cXx1f3l6gXmFeIl7jXaVdZl0nXehcqVxrXCxc7VuuW29bMVvyWrNadFo2WvdZuFl5WTpZ/Fi9WH5Ys130XUles14iX///z18CYP//k2DUYCNhfmHZYTRikGLrYkZjsWMGZGJkvWQdZXll6GVXZsZmNWc9ZwFnxGaNZlRmHmblZatlcmU7ZQRlzGSTZFtkI2TsY7RjfGNEYxJj1GKbYmBiJWLqYa1hcGExYfNgtGB1YDZg+F+5X3pfO1/9Xr5ef15AXgFew12EXUVdBl3IXIlcSlwLXMxbjltPWxBb0VqSWlRaFVrWWZdZWVkaWdtYD15QXpFe5l5CX6xfG2BeYKBg6GAwYXJhwGEbYnZi0WItY4hj42M/ZKNk/2RaZbVlFmZxZuBmT2eaZ15nKmfuZrZmfWZDZgtm02WgZWRlLGXzZLxkhGRMZBRk3GOlY29jM2P7Yr9ihGJIYgtizWGOYVBhEWHSYJNgVWAWYNdfmF9ZXxtf3F6dXl5eIF7hXaJdY10kXeZcp1xoXClc61usW21bLlvvWrFaclozWvRZtVl3WThZfl6rXu1eLl+DX95fOmCkYPtgPWGFYc1hD2JdYrhiE2NuY8pjJWSAZNtkN2WcZfdlUmauZg5naWfYZ71nhmdMZxdn3makZmtmM2b9ZcRljGVUZRxl5GSsZHVkPWQKZM1jk2NZYx5j4mKmYmhiKmLrYa1hbmEvYfBgsWBzYDRg9V+2X3hfOV/6XrtefF4+Xv9dwF2BXUJdBF3FXIZcR1wJXMpbi1tMWw1bz1qQWlFaElrUWZVZ7V4HX0hfil/LX///e2DWYDJhmGHaYSJiamKsYvpiVWOwYwtkZmTBZB1leGXTZS9mlGbvZkpnpmcGaCJo5meuZ3VnPGcDZ8tmmGZcZiVm7GW0ZXxlRWUNZdVknWRoZCxk82O4Y3xjQGMDY8Vih2JIYgliy2GMYU1hDmHPYJFgUmATYNRfll9XXxhf2V6aXlxeHV7eXZ9dYV0iXeNcpFxlXCdc6FupW2pbLFvtWq5ab1owWvJZJF92X6Rf5V//////vWAYYXNhzmEpYnZiv2IHY0hjl2PyY01kqGQDZV5luWUUZnBmy2YmZ4tn5mdCaH5oRWgPaNZnnGdjZytn9Wa9ZoRmTGYUZt1lpWVtZTVlA2XFZIxkUWQXZNtjnmNhYyJj5GKlYmZiJ2LpYapha2EsYe5gr2BwYDFg8l+0X3VfNl/3Xrheel47XvxdvV1/XUBdAV3CXINcRVwGXMdbiFtKWwtbzFqNWk5aFl+FX///QGD///////9aYbRhD2JqYsViE2NbY6Nj5WMzZI5k6WREZZ9l+mVVZrBmDGdnZ8JnHmiCaN5opmhtaDRo+2fEZ5FnVWcdZ+RmrGZ1Zj1mBWbNZZVlYGUkZetksGR1ZDlk/GO+Y39jQWMCY8NihGJFYgdiyGGJYUphC2HNYI5gT2AQYNJfk19UXxVf1l6YXlleGl7bXZ1dXl0fXeBcoVxjXCRc5VumW2hbKVvqWqtaMF+eXwxg////////nmG1YfZhUGKrYgZjYWOwY/hjQGSCZNBkKmWFZeBlO2aWZvFmTGenZwJoXmi5aBRpB2nOaJRoXGgkaO1ntWd8Z0RnDWfVZp1mZWYtZvtlvWWEZUllD2XTZJZkWWQaZNxjnWNeYyBj4WKiYmNiJWLmYadhaGEpYetgrGBtYC5g71+xX3JfM1/0XrZed144Xvldul18XT1d/ly/XIFcQlwDXMRbhVtHWwhbZ1/CXydglGACYXBh62EaYlFikmLsYkdjoWP8Y0xklGTcZB5lbGXGZSBme2bWZjFnjGfnZ0JonWj5aFRpZmksafNovGiJaE1oFWjcZ6VnbWc1Z/1mxWaOZlhmHGbjZahlbWUxZfRktmR3ZDlk+mO7Y3xjPWP/YsBigWJCYgRixWGGYUdhCGHKYItgTGANYM9fkF9RXxJf016VXlZeF17YXZpdW10cXd1cnlxgXCFc4lujW2Rb","icefree_route":[[-17.38,161.38],[-20.38,162.88],[-23.38,164.38],[-25.12,165.88],[-26.62,167.38],[-28.12,168.88],[-29.62,170.38],[-31.12,171.88],[-32.62,173.38],[-34.12,174.88],[-35.62,176.38],[-37.12,177.88],[-38.62,179.38],[-40.12,180.88],[-41.62,182.38],[-43.12,183.88],[-44.62,185.38],[-46.12,187.62],[-47.62,190.62],[-49.12,193.62],[-50.62,196.62],[-52.12,199.62],[-53.62,202.62],[-55.12,205.62],[-56.62,208.62],[-58.12,211.62],[-59.62,214.62],[-59.88,216.38],[-59.88,217.88],[-59.88,219.38],[-59.88,220.88],[-59.88,222.38],[-59.88,223.88],[-59.88,225.38],[-59.88,226.88],[-59.88,228.38],[-59.88,229.88],[-59.88,231.38],[-59.88,232.88],[-59.88,234.38],[-59.88,235.88],[-59.88,237.38],[-59.88,238.88],[-59.88,240.38],[-59.88,241.88],[-59.88,243.38],[-59.88,244.88],[-59.88,246.38],[-59.88,247.88],[-59.88,249.38],[-59.88,250.88],[-59.88,252.38],[-59.88,253.88],[-59.88,255.38],[-59.88,256.88],[-59.88,258.38],[-59.88,259.88],[-59.88,261.38],[-59.88,262.88],[-59.88,264.38],[-59.88,265.88],[-59.88,267.38],[-59.88,268.88],[-59.88,270.38],[-59.88,271.88],[-59.88,273.38],[-59.88,274.88],[-59.88,276.38],[-59.88,277.88],[-59.88,279.38],[-59.88,280.88],[-59.88,282.38],[-59.88,283.88],[-58.88,286.38],[-57.38,289.38],[-55.88,292.38],[-54.12,295.12],[-52.62,296.88],[-51.12,298.38],[-49.62,299.88],[-48.12,301.38],[-46.62,302.88],[-45.12,304.38],[-43.62,305.88],[-42.12,307.38],[-40.62,308.88],[-39.12,310.38],[-36.38,311.88],[-33.38,313.38],[-30.38,314.88],[-27.38,316.38],[-24.38,317.88],[-21.38,319.38],[-18.38,320.88],[-15.38,322.38],[-12.38,323.88],[-9.38,325.38],[-7.88,325.38],[-5.88,324.88],[-3.12,323.62],[-0.12,322.12],[2.88,320.62],[5.88,319.12],[8.88,317.62],[11.88,316.12],[14.88,314.62],[17.88,313.12],[19.88,311.62],[21.38,310.12],[22.88,308.62],[24.38,307.12],[25.88,305.62],[27.38,304.12],[28.88,302.62],[30.38,301.12],[31.88,299.62],[33.38,298.12],[34.88,296.62],[36.38,295.12],[37.88,293.62],[39.38,292.12],[40.88,290.62],[42.12,289.38]],"grid":{"lat0":-49.5,"lon0":120.5,"step":1.0,"ny":60,"nx":90}};
+const oceanGrids = {};
+["full", "icefree"].forEach(k => {
+  const b = atob(OCEAN[k]), a = new Uint16Array(b.length / 2);
+  for (let i = 0; i < a.length; i++) a[i] = b.charCodeAt(2 * i) | (b.charCodeAt(2 * i + 1) << 8);
+  oceanGrids[k] = a;
+});
+function oceanKm(k, p) {
+  const g = OCEAN.grid, lon = ((p.lon % 360) + 360) % 360;
+  const ci = Math.round((p.lat - g.lat0) / g.step), cj = Math.round((lon - g.lon0) / g.step);
+  let best = Infinity;
+  for (let i = ci - 2; i <= ci + 2; i++) for (let j = cj - 2; j <= cj + 2; j++) {
+    if (i < 0 || j < 0 || i >= g.ny || j >= g.nx) continue;
+    const v = oceanGrids[k][i * g.nx + j];
+    if (v === 65535) continue;
+    const d = v + haversineKm(p, { lat: g.lat0 + i * g.step, lon: g.lon0 + j * g.step });
+    if (d < best) best = d;
+  }
+  return best;
+}
+const r100 = v => (Math.round(v / 100) * 100).toLocaleString();
+const approx = km => isFinite(km) ? "\u2248 " + r100(km) + " km (" + r100(km * MI) + " mi)" : "outside the precomputed area";
+function drawHome() {
+  const here = latestPoint();
+  $("h-gc").textContent = kmMi(haversineKm(here, SHS));
+  $("h-arc").textContent = approx(oceanKm("full", here));
+  $("h-ice").textContent = approx(oceanKm("icefree", here));
+  // Time to drift there at the float's average speed so far (total path / total time, same as the Drift rate strip).
+  let kmd = 0;
+  if (allPoints.length > 1) {
+    let path = 0;
+    for (let i = 1; i < allPoints.length; i++) path += haversineKm(allPoints[i - 1], allPoints[i]);
+    const days = (new Date(allPoints[allPoints.length - 1].time) - new Date(allPoints[0].time)) / 86400000;
+    if (days > 0) kmd = path / days;
+  }
+  const t = km => (kmd > 0 && isFinite(km)) ? "Time to drift there: about " + fmtDur(km / kmd) + " at " + kmd.toFixed(1) + " km/day (" + (kmd * MI).toFixed(1) + " mi/day)" : "";
+  $("h-gc-t").textContent = t(haversineKm(here, SHS));
+  $("h-arc-t").textContent = t(oceanKm("full", here));
+  $("h-ice-t").textContent = t(oceanKm("icefree", here));
+}
+const routeLayer = L.layerGroup();
+function drawRoutes() {
+  routeLayer.clearLayers();
+  const here = latestPoint(), hl = ((here.lon % 360) + 360) % 360;
+  [["full_route", "#7b3fa0", "Shortest all-water path (Northwest Passage)"], ["icefree_route", "#d97706", "Shortest ice-free path (Drake Passage)"]].forEach(([k, c, label]) => {
+    const pts = [[here.lat, hl]].concat(OCEAN[k].slice(2), [[SHS.lat, SHS.lon + 360]]);
+    L.polyline(pts, { color: c, weight: 2.5, dashArray: "6 5", opacity: 0.9 }).bindTooltip(label, { sticky: true }).addTo(routeLayer);
+  });
+  L.circleMarker([SHS.lat, SHS.lon + 360], { radius: 6, color: "#fff", weight: 2, fillColor: "#12303b", fillOpacity: 1 })
+    .bindPopup("<b>Swampscott High School</b>").addTo(routeLayer);
+}
+$("rt-show").addEventListener("change", e => {
+  if (e.target.checked) { drawRoutes(); routeLayer.addTo(map); userTouched = true; map.fitBounds(L.featureGroup(routeLayer.getLayers()).getBounds().pad(0.05)); }
+  else map.removeLayer(routeLayer);
+});
+
+function drawAll() {
+  drawMap(); drawFacts(); drawTable(); drawDrift(); drawMovement(); drawHome();
+  if (map.hasLayer(routeLayer)) drawRoutes();
+}
+
+/* ---------- Data ---------- */
+function normTime(t) {
+  if (!t) return null;
+  let str = String(t).trim().replace(" ", "T");
+  if (!/(Z|[+-]\d\d:?\d\d)$/.test(str)) str += "Z";      // assume UTC if no zone given
+  if (/^\d{4}-\d\d-\d\dTZ$/.test(str)) return null;
+  const d = new Date(str);
+  return isNaN(d) ? null : d.toISOString();
+}
+
+async function fetchArgovis(src) {
+  const url = "https://argovis-api.colorado.edu/argo?platform=" + encodeURIComponent(CONFIG.wmo);
+  let timer;
+  const timeout = new Promise((_, rej) => { timer = setTimeout(() => rej(new Error("timed out")), 20000); });
+  try {
+    const res = await Promise.race([fetch(url), timeout]);
+    if (res.status === 404) return [];
+    if (!res.ok) throw new Error("status " + res.status);
+    const docs = await res.json();
+    if (!Array.isArray(docs)) throw new Error("unexpected reply");
+    return docs
+      .filter(x => x.timestamp && x.geolocation && x.geolocation.coordinates && ![3, 4].includes(x.geolocation_argoqc))
+      .map(x => ({
+        time: new Date(x.timestamp).toISOString(),
+        lat: x.geolocation.coordinates[1],
+        lon: x.geolocation.coordinates[0],
+        cycle: x.cycle_number ?? null,
+        source: src.name
+      }));
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
+async function loadData() {
+  const dep = CONFIG.deployment;
+  const base = [{ time: dep.time, lat: dep.lat, lon: dep.lon, cycle: 0, source: "Deployment" }];
+  const warnings = [];
+  const manual = [];
+  CONFIG.manualPositions.forEach((p, i) => {
+    const t = normTime(p.time), lat = Number(p.lat), lon = Number(p.lon);
+    if (!t || !isFinite(lat) || !isFinite(lon) || Math.abs(lat) > 90 || Math.abs(lon) > 360) {
+      warnings.push("Manual entry #" + (i + 1) + " was skipped. Check its time (e.g. 2026-10-02T04:10:00Z) and coordinates (south and west are negative).");
+      return;
+    }
+    manual.push({ cycle: p.cycle ?? null, time: t, lat, lon, source: "Manual" });
+  });
+
+  let fetched = [], ok = false, errors = [];
+  for (const src of SOURCES) {
+    try {
+      fetched = await src.run(src);
+      ok = true;
+      sourceNote = src.name;
+      break;
+    } catch (e) {
+      errors.push(src.name + ": " + e.message);
+    }
+  }
+
+  // If the servers now report a cycle that was entered by hand, use the server's version.
+  const fetchedCycles = new Set(fetched.filter(f => f.cycle != null).map(f => Number(f.cycle)));
+  const manualKept = manual.filter(m => m.cycle == null || !fetchedCycles.has(Number(m.cycle)));
+
+  const seen = new Set();
+  allPoints = base.concat(manualKept, fetched)
+    .sort((a, b) => new Date(a.time) - new Date(b.time))
+    .filter(p => { const k = p.time.slice(0, 16); if (seen.has(k)) return false; seen.add(k); return true; });
+
+  drawAll();
+  if (!$("view-dive").classList.contains("hidden")) drawDive();
+
+  const stamp = new Date().toISOString().slice(0, 16).replace("T", " ") + " UTC";
+  if (!ok) {
+    const last = allPoints[allPoints.length - 1];
+    setStatus("Waiting for new data upload. Current most recent data from " + fmtTime(last.time) + " UTC is shown.");
+  } else if (fetched.length === 0) {
+    setStatus("No profiles reported yet for float " + CONFIG.wmo + ". Checked " + sourceNote + " at " + stamp +
+      ". The page re-checks automatically.");
+  } else {
+    setStatus("Updated from " + sourceNote + " at " + stamp + ". Re-checks every " + CONFIG.refreshMinutes + " min.");
+  }
+  if (warnings.length) {
+    $("status").textContent += " " + warnings.join(" ");
+    $("status").className = "err";
+  }
+}
+
+
+/* ---------- Movement tab ---------- */
+const PLACES = [
+  ["Swampscott, MA (home)", 42.47, -70.92],
+  ["University of Washington, Seattle", 47.655, -122.308],
+  ["Port Vila, Vanuatu", -17.73, 168.32],
+  ["Noum\u00E9a, New Caledonia", -22.27, 166.45],
+  ["Cairns, Australia", -16.92, 145.77]
+];
+const MI = 0.621371;
+const miText = km => Math.round(km * MI).toLocaleString();
+
+function legsFromPoints() {
+  const legs = [];
+  for (let i = 1; i < allPoints.length; i++) {
+    const a = allPoints[i - 1], b = allPoints[i];
+    const days = (new Date(b.time) - new Date(a.time)) / 86400000;
+    const km = haversineKm(a, b);
+    if (!(days > 0)) continue;
+    const name = p => p.source === "Deployment" ? "Deploy" : "C" + (p.cycle ?? "?");
+    legs.push({ label: name(a) + " → " + name(b), days, km, kmd: km / days, cms: km / days * 1e5 / 86400, brg: bearingDeg(a, b) });
+  }
+  return legs;
+}
+const niceCeil = v => { const m = Math.pow(10, Math.floor(Math.log10(v))); const f = v / m; return (f <= 1 ? 1 : f <= 2 ? 2 : f <= 5 ? 5 : 10) * m; };
+function fmtDur(days) {
+  if (!isFinite(days)) return "-";
+  if (days < 1) return "under 1 day";
+  if (days < 60) return Math.round(days) + " days";
+  if (days < 730) return (days / 30.44).toFixed(1) + " months";
+  const y = days / 365.25;
+  return (y < 10 ? y.toFixed(1) : Math.round(y).toLocaleString()) + " years";
+}
+const hdg = d => compass(d) + " (" + Math.round(d) + "°)";
+
+function drawMovement() {
+  const legs = legsFromPoints();
+  const tb = $("mv-legs"), pace = $("mv-pace");
+  tb.innerHTML = "";
+  if (!legs.length) {
+    tb.innerHTML = '<tr><td colspan="5" class="nodata">Waiting for the float’s first profile.</td></tr>';
+    pace.textContent = "Movement statistics appear once the float has surfaced.";
+    $("mv-rose").innerHTML = '<div class="nodata">No movement yet.</div>';
+  } else {
+    const maxKmd = Math.max(...legs.map(l => l.kmd));
+    legs.slice().reverse().forEach((l, idx) => {
+      const tr = document.createElement("tr");
+      if (idx === 0) tr.className = "latest";
+      const w = Math.max(2, Math.round(l.kmd / maxKmd * 70));
+      tr.innerHTML = "<td>" + l.label + (l.label.startsWith("Deploy") ? ' <span style="color:#5b7680;font-size:0.72rem">incl. first descent</span>' : "") + "</td><td>" + l.days.toFixed(1) + "</td><td>" + kmMi(l.km, 1) + "</td>" +
+        '<td><span class="speedbar" style="width:' + w + 'px"></span>' + l.kmd.toFixed(1) + " km/day (" + (l.kmd * MI).toFixed(1) + " mi/day)<br><small>" + l.cms.toFixed(1) + " cm/s (" + (l.cms / 2.54).toFixed(1) + " in/s)</small></td>" +
+        "<td>" + hdg(l.brg) + "</td>";
+      tb.appendChild(tr);
+    });
+    drawRose(legs);
+
+    const last = legs[legs.length - 1], latest = latestPoint();
+    const cp = PLACES.find(q => q[0].startsWith("Cairns"));
+    const cairns = haversineKm(latest, { lat: cp[1], lon: cp[2] });
+    const years = cairns / (last.kmd * 365);
+    pace.innerHTML = "<b>At the latest pace</b> (" + last.kmd.toFixed(1) + " km/day (" + (last.kmd * MI).toFixed(1) + " mi/day) toward " + compass(last.brg) + ") the float would drift about <b>" +
+      Math.round(last.kmd * 365).toLocaleString() + " km (" + miText(last.kmd * 365) + " mi) in a year</b>. Cairns is " + Math.round(cairns).toLocaleString() +
+      " km (" + miText(cairns) + " mi) away, which would take about " + (years < 10 ? years.toFixed(1) : Math.round(years)) +
+      " years if the currents never changed (they will).";
+  }
+
+  const pl = $("mv-places");
+  pl.innerHTML = "";
+  const here = latestPoint();
+  const kmdNow = legs.length ? legs[legs.length - 1].kmd : 0;
+  PLACES.map(([n, la, lo]) => ({ n, km: haversineKm(here, { lat: la, lon: lo }), brg: bearingDeg(here, { lat: la, lon: lo }) }))
+    .forEach(r => {
+      const tr = document.createElement("tr");
+      tr.innerHTML = "<td>" + r.n + "</td><td>" + kmMi(r.km) + "</td><td>" + compass(r.brg) + "</td><td>" + (kmdNow > 0 ? fmtDur(r.km / kmdNow) : "-") + "</td>";
+      pl.appendChild(tr);
+    });
+}
+
+function drawRose(legs) {
+  const host = $("mv-rose");
+  const side = Math.min(host.clientWidth, host.clientHeight) - 8;
+  if (!(side > 60)) return;
+  const C = 110, R = 84;
+  const maxCms = niceCeil(Math.max(...legs.map(l => l.cms), 0.5));
+  const pt = (deg, r) => [C + r * Math.sin(deg * Math.PI / 180), C - r * Math.cos(deg * Math.PI / 180)];
+  let g = "";
+  [1 / 3, 2 / 3, 1].forEach(f => {
+    g += '<circle cx="' + C + '" cy="' + C + '" r="' + (R * f) + '" fill="none" stroke="#d3e2e4"/>' +
+         '<text x="' + (C + 3) + '" y="' + (C - R * f + 9) + '" font-size="7" fill="#5b7680">' + (maxCms * f).toFixed(maxCms < 3 ? 1 : 0) + " cm/s</text>";
+  });
+  for (let d = 0; d < 360; d += 45) {
+    const [x, y] = pt(d, R);
+    g += '<line x1="' + C + '" y1="' + C + '" x2="' + x.toFixed(1) + '" y2="' + y.toFixed(1) + '" stroke="#e6eff0"/>';
+  }
+  [["N", 0], ["E", 90], ["S", 180], ["W", 270]].forEach(([t, d]) => {
+    const [x, y] = pt(d, R + 12);
+    g += '<text x="' + x.toFixed(1) + '" y="' + (y + 3).toFixed(1) + '" text-anchor="middle" font-size="10" font-weight="700" fill="#12303b">' + t + "</text>";
+  });
+  const arrow = (deg, cms, color, width, dash, title) => {
+    const L = Math.max(4, R * Math.min(cms / maxCms, 1));
+    const [x, y] = pt(deg, L);
+    const [h1x, h1y] = [x - 8 * Math.sin((deg + 25) * Math.PI / 180), y + 8 * Math.cos((deg + 25) * Math.PI / 180)];
+    const [h2x, h2y] = [x - 8 * Math.sin((deg - 25) * Math.PI / 180), y + 8 * Math.cos((deg - 25) * Math.PI / 180)];
+    return '<g><title>' + title + '</title><line x1="' + C + '" y1="' + C + '" x2="' + x.toFixed(1) + '" y2="' + y.toFixed(1) + '" stroke="' + color + '" stroke-width="' + width + '"' + (dash ? ' stroke-dasharray="4 3"' : "") + '/>' +
+      '<path d="M' + h1x.toFixed(1) + " " + h1y.toFixed(1) + "L" + x.toFixed(1) + " " + y.toFixed(1) + "L" + h2x.toFixed(1) + " " + h2y.toFixed(1) + '" fill="none" stroke="' + color + '" stroke-width="' + width + '"/></g>';
+  };
+  legs.slice(0, -1).forEach(l => { g += arrow(l.brg, l.cms, "#8a949a", 1.6, false, l.label + ": " + l.cms.toFixed(1) + " cm/s toward " + compass(l.brg)); });
+  if (allPoints.length > 2) {
+    const first = allPoints[1] || allPoints[0], lastP = allPoints[allPoints.length - 1];
+    const dd = (new Date(lastP.time) - new Date(first.time)) / 86400000;
+    if (dd > 0) {
+      const km = haversineKm(first, lastP);
+      g += arrow(bearingDeg(first, lastP), km / dd * 1e5 / 86400, "#1b6f8a", 1.6, true, "Overall average since the first profile");
+    }
+  }
+  const lt = legs[legs.length - 1];
+  g += arrow(lt.brg, lt.cms, "#d62828", 2.6, false, lt.label + ": " + lt.cms.toFixed(1) + " cm/s toward " + compass(lt.brg));
+  g += '<circle cx="' + C + '" cy="' + C + '" r="3" fill="#12303b"/>';
+  host.innerHTML = '<svg width="' + side + '" height="' + side + '" viewBox="0 0 220 220" role="img" aria-label="Compass of the float’s drift direction and speed for each leg">' + g + "</svg>";
+}
+
+const HOUR = 3600000, DAY = 86400000;
+const tms = iso => new Date(iso).getTime();
+const fmtShort = ms => new Date(ms).toLocaleDateString("en-US", { day: "numeric", month: "short", timeZone: "UTC" });
+const fmtDayHM = ms => new Date(ms).toLocaleString("en-US", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit", hour12: false, timeZone: "UTC" }) + " UTC";
+
+function allDives() {
+  const out = Object.assign({}, DIVES);
+  const known = Object.keys(DIVES).map(Number).sort((a, b) => a - b);
+  const lastK = known[known.length - 1], ref = DIVES[lastK];
+  // Phase lengths copied from the last cycle with full trajectory data.
+  const descent = tms(ref.det) - tms(ref.dst), deep = tms(ref.ast) - tms(ref.pet), ascent = tms(ref.aet) - tms(ref.ast);
+  const gaps = known.filter(k => !DIVES[k].surfEndMin).map(k => tms(DIVES[k].surfEnd) - tms(DIVES[k].aet)).sort((a, b) => a - b);
+  const gap = gaps.length ? gaps[Math.floor(gaps.length / 2)] : HOUR;
+  const pk = ref.park.length ? ref.park.slice().sort((a, b) => a - b)[Math.floor(ref.park.length / 2)] : ref.pdet;
+  const surf = {};
+  allPoints.forEach(p => { if (p.source !== "Deployment" && p.cycle != null && p.cycle > lastK) surf[p.cycle] = tms(p.time); });
+  let prevAet = tms(ref.aet);
+  Object.keys(surf).map(Number).sort((a, b) => a - b).forEach(k => {
+    const aet = surf[k], dst = prevAet + gap, det = dst + descent;
+    const ast = aet - ascent, pet = ast - deep;
+    if (!(pet > det + DAY)) return;
+    const f = ms => new Date(ms).toISOString();
+    out[k] = { dst: f(dst), det: f(det), pet: f(pet), ast: f(ast), aet: f(aet), pdet: pk, ppet: pk,
+               parkStart: f(det), park: [], surfEnd: f(aet + gap), surfEndMin: true, est: true };
+    prevAet = aet;
+  });
+  return out;
+}
+
+function divePoints(r) {
+  const pts = [[tms(r.dst), 0, "desc"], [tms(r.det), r.pdet, "desc"]];
+  if (r.park.length) {
+    const t0 = tms(r.parkStart);
+    r.park.forEach((p, i) => pts.push([t0 + i * HOUR, p, "park"]));
+  }
+  pts.push([tms(r.pet), r.ppet, "park"]);
+  pts.push([tms(r.ast), MAX_PROFILE_DBAR, "desc"]);
+  pts.push([tms(r.aet), 0, "asc"]);
+  return pts;
+}
+
+function drawDive() {
+  const DV = allDives();
+  const keys = Object.keys(DV).map(Number).sort((a, b) => a - b);
+  const lastK = keys[keys.length - 1];
+  // Stats come from the latest cycle that spent more than a day parked.
+  const full = keys.filter(k => (tms(DV[k].pet) - tms(DV[k].det)) > DAY);
+  const ref = DV[full.length ? full[full.length - 1] : lastK];
+  const park = tms(ref.pet) - tms(ref.det);
+  const total = tms(ref.aet) - tms(ref.dst);
+  const parkP = ref.park.length ? ref.park.slice().sort((a, b) => a - b)[Math.floor(ref.park.length / 2)] : ref.pdet;
+  $("dv-park").textContent = (park / DAY).toFixed(1) + " days at ~" + mFt(Math.round(parkP / 10) * 10);
+  $("dv-share").textContent = Math.round(park / total * 100) + "%";
+
+  const sk = keys.filter(k => !DV[k].est && !DV[k].surfEndMin);
+  const surfs = (sk.length ? sk : keys).map(k => (tms(DV[k].surfEnd) - tms(DV[k].aet)) / HOUR);
+  const anyMin = !sk.length;
+  const sLo = Math.min(...surfs), sHi = Math.max(...surfs);
+  $("dv-surf").textContent = (anyMin ? "about " : "") + (sHi - sLo < 0.2 ? sLo.toFixed(1) : sLo.toFixed(1) + "–" + sHi.toFixed(1)) + " hours";
+
+  const cycleLen = total + 1 * HOUR;
+  const nextMs = tms(DV[lastK].aet) + cycleLen;
+  const daysTo = (nextMs - Date.now()) / DAY;
+  $("dv-next").textContent = fmtShort(nextMs) + (daysTo > 0 ? " (in " + daysTo.toFixed(1) + " d)" : " (due now)");
+
+  $("dv-note").innerHTML =
+    "<b>Why it matters for the drift:</b> the float spends only about an hour at the surface, then spends about " + Math.round(park / total * 100) +
+    "% of each cycle parked and drifting with the current at roughly " + mFt(Math.round(parkP / 10) * 10) +
+    ". The speeds on the Movement tab are mostly <b>deep current</b>, not surface wind-driven drift. " +
+    "It also floated at the surface for about " + DEPLOY_SURFACE_HOURS + " hours after deployment before its first dive. " +
+    "The next surfacing is an estimate from the length of the last full cycle; it can shift by several hours." +
+    (keys.some(k => DV[k].est) ? " Dashed lines are cycles whose dive timing is estimated from their surfacing time." : "");
+
+  // ---- chart
+  const host = $("dv-chart");
+  // Fixed proportion: always 3 wide to 1 tall (with a minimum height so it stays readable on phones).
+  const DIVE_RATIO = 3;
+  const W = host.clientWidth - 16;
+  if (!(W > 80)) return;
+  const H = Math.max(200, Math.round(W / DIVE_RATIO));
+  const m = { l: 52, r: 14, t: 10, b: 36 };
+  const pw = W - m.l - m.r, ph = H - m.t - m.b;
+  const t0 = tms(CONFIG.deployment.time), t1 = Math.max(tms(DV[lastK].aet) + 12 * HOUR, Math.min(nextMs, tms(DV[lastK].aet) + 12 * DAY));
+  const X = t => m.l + (t - t0) / (t1 - t0) * pw;
+  const dmax = 1600, Y = p => m.t + p / dmax * ph;
+  let g = "";
+  [0, 500, 1000, 1500].forEach(p => {
+    g += '<line x1="' + m.l + '" x2="' + (W - m.r) + '" y1="' + Y(p) + '" y2="' + Y(p) + '" stroke="#e1ecee"/>' +
+         '<text x="' + (m.l - 8) + '" y="' + (Y(p) + 4) + '" text-anchor="end" font-size="11" fill="#5b7680">' + p + "</text>";
+  });
+  const spanDays = (t1 - t0) / DAY, stepD = spanDays > 18 ? 4 : spanDays > 9 ? 2 : 1;
+  const day0 = Date.UTC(new Date(t0).getUTCFullYear(), new Date(t0).getUTCMonth(), new Date(t0).getUTCDate());
+  for (let t = day0 + DAY; t <= t1; t += stepD * DAY) {
+    g += '<line y1="' + m.t + '" y2="' + (m.t + ph) + '" x1="' + X(t) + '" x2="' + X(t) + '" stroke="#e1ecee"/>' +
+         '<text x="' + X(t) + '" y="' + (m.t + ph + 15) + '" text-anchor="middle" font-size="11" fill="#5b7680">' + fmtShort(t) + "</text>";
+  }
+  g += '<rect x="' + m.l + '" y="' + m.t + '" width="' + pw + '" height="' + ph + '" fill="none" stroke="#c5d8db"/>';
+  g += '<text transform="translate(13 ' + (m.t + ph / 2) + ') rotate(-90)" text-anchor="middle" font-size="12" fill="#12303b">Depth (m)</text>';
+  g += '<text x="' + (m.l + pw / 2) + '" y="' + (H - 4) + '" text-anchor="middle" font-size="12" fill="#12303b">Date (UTC)</text>';
+
+  // deployment, floating at the surface
+  const firstDst = tms(DV[keys[0]].dst);
+  g += '<line x1="' + X(t0) + '" x2="' + X(firstDst) + '" y1="' + Y(0) + '" y2="' + Y(0) + '" stroke="#8a949a" stroke-width="2"/>';
+  const col = { desc: "#8a949a", park: "#1b6f8a", asc: "#d97706" };
+  keys.forEach(k => {
+    const pts = divePoints(DV[k]);
+    for (let i = 1; i < pts.length; i++) {
+      const a = pts[i - 1], b = pts[i], ph2 = b[2];
+      g += '<line x1="' + X(a[0]).toFixed(1) + '" y1="' + Y(a[1]).toFixed(1) + '" x2="' + X(b[0]).toFixed(1) + '" y2="' + Y(b[1]).toFixed(1) +
+           '" stroke="' + col[ph2] + '" stroke-width="' + (ph2 === "park" ? 2.6 : 1.8) + '" stroke-linecap="round"' + (DV[k].est ? ' stroke-dasharray="7 4"' : "") + '/>';
+    }
+    const end = pts[pts.length - 1];
+    g += '<circle cx="' + X(end[0]).toFixed(1) + '" cy="' + Y(0) + '" r="3.5" fill="#12303b"><title>Cycle ' + k + " at the surface, " + fmtDayHM(end[0]) + "</title></circle>";
+    const mid = X((tms(DV[k].det) + tms(DV[k].pet)) / 2);
+    if (tms(DV[k].pet) - tms(DV[k].det) > DAY)
+      g += '<text x="' + mid.toFixed(1) + '" y="' + (Y(parkP) - 8).toFixed(1) + '" text-anchor="middle" font-size="11" fill="#1b6f8a">cycle ' + k + ": parked " + ((tms(DV[k].pet) - tms(DV[k].det)) / DAY).toFixed(1) + " days" + (DV[k].est ? " (est.)" : "") + "</text>";
+  });
+  // expected next dive
+  const nextDst = tms(DV[lastK].aet) + 1 * HOUR;
+  if (nextDst < t1) {
+    g += '<line x1="' + X(nextDst) + '" x2="' + X(Math.min(nextMs, t1)) + '" y1="' + Y(parkP) + '" y2="' + Y(parkP) + '" stroke="#1b6f8a" stroke-width="2" stroke-dasharray="3 4" opacity="0.7"/>' +
+         '<text x="' + ((X(nextDst) + X(Math.min(nextMs, t1))) / 2).toFixed(1) + '" y="' + (Y(parkP) - 8).toFixed(1) + '" text-anchor="middle" font-size="11" fill="#5b7680">next cycle (expected)</text>';
+  }
+  host.innerHTML = '<svg width="' + W + '" height="' + H + '" role="img" aria-label="Float depth over time, showing long periods parked near 1000 metres and short trips to the surface">' + g + "</svg>";
+}
+
+const VIEWS = { map: "view-map", move: "view-move", dive: "view-dive" };
+function showView(which) {
+  Object.keys(VIEWS).forEach(k => {
+    $(VIEWS[k]).classList.toggle("hidden", k !== which);
+    $("tab-" + k).setAttribute("aria-selected", k === which ? "true" : "false");
+  });
+  if (which === "move") drawMovement();
+  else if (which === "dive") drawDive();
+  else { map.invalidateSize(); if (!userTouched) setPacificView(latestPoint()); }
+}
+$("tab-map").addEventListener("click", () => showView("map"));
+$("tab-move").addEventListener("click", () => showView("move"));
+$("tab-dive").addEventListener("click", () => showView("dive"));
+window.addEventListener("resize", () => {
+  if (!$("view-move").classList.contains("hidden")) drawMovement();
+  if (!$("view-dive").classList.contains("hidden")) drawDive();
+});
+
+/* ---------- Events ---------- */
+$("sort-btn").addEventListener("click", () => { sortDesc = !sortDesc; drawTable(); });
+$("refresh").addEventListener("click", () => { setStatus("Checking for updates..."); loadData(); });
+
+window.addEventListener("resize", () => {
+  map.invalidateSize();
+  if (!userTouched) setPacificView(allPoints.length ? allPoints[allPoints.length - 1] : CONFIG.deployment);
+});
+setTimeout(() => {
+  map.invalidateSize();
+  if (!userTouched) setPacificView(allPoints.length ? allPoints[allPoints.length - 1] : CONFIG.deployment);
+}, 200);
+
+loadData();
+setInterval(loadData, CONFIG.refreshMinutes * 60 * 1000);
+</script>
+</body>
+</html>
